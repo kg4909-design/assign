@@ -466,7 +466,7 @@ function calcLeave(){
 function toggleAdmin(){
   const p = document.getElementById("admin");
   if (p.style.display === "block") { p.style.display = "none"; return; }
-  const pw = prompt("관리자 비밀번호를 입력하세요 (기본값: 1234)");
+  const pw = prompt("관리자 비밀번호를 입력하세요");
   if (pw === "1234") { p.style.display = "block"; renderAdmin(); }
   else if (pw !== null) alert("비밀번호가 일치하지 않습니다.");
 }
