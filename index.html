@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>배곧초 통합 학년·업무 배정 시스템</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Malgun Gothic", sans-serif; }
+    body { max-width: 1280px; margin: 0 auto; padding: 14px; background: #f1f5f9; color: #1e293b; }
+    header { display: flex; justify-content: space-between; align-items: center; background: #1e3a8a; color: white; padding: 14px 20px; border-radius: 12px; margin-bottom: 14px; }
+    header h1 { margin: 0; font-size: 1.3rem; }
+    .admin-btn { background: #3b82f6; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    .card { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); margin-bottom: 14px; }
+    .status-bar { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; background: #eff6ff; border: 2px solid #93c5fd; padding: 12px 18px; border-radius: 10px; margin-bottom: 14px; }
+    .turn-badge { font-size: 1.2rem; font-weight: 800; color: #1d4ed8; }
+    .my-turn-banner { background: #fef08a; border: 2px solid #eab308; color: #854d0e; padding: 14px; border-radius: 10px; text-align: center; font-size: 1.15rem; font-weight: bold; margin-bottom: 14px; animation: pulse 1.4s infinite; }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+    
+    /* 0단계 점수 입력 폼 스타일 */
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; align-items: end; margin-top: 10px; }
+    .form-group label { display: block; font-size: 0.8rem; font-weight: bold; margin-bottom: 4px; color: #475569; }
+    .form-group input, .form-group select { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; }
+    .guide-box { background: #f8fafc; border: 1px dashed #cbd5e1; padding: 10px 14px; border-radius: 8px; font-size: 0.82rem; color: #475569; margin-top: 12px; line-height: 1.5; }
+    
+    /* 대시보드 레이아웃 */
+    .main-layout { display: grid; grid-template-columns: 1.1fr 1.3fr; gap: 14px; align-items: start; }
+    @media (max-width: 960px) { .main-layout { grid-template-columns: 1fr; } }
+    .btn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(125px, 1fr)); gap: 7px; }
+    button.choice-btn { padding: 9px 5px; border: 1px solid #cbd5e1; border-radius: 8px; background: white; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: 0.15s; line-height: 1.25; }
+    button.choice-btn:hover:not(:disabled) { background: #2563eb; color: white; border-color: #2563eb; }
+    button.choice-btn:disabled { background: #e2e8f0; color: #94a3b8; cursor: not-allowed; }
+    button.jeondam-duty { border-color: #f97316; background: #fff7ed; color: #c2410c; }
+    
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    th, td { border: 1px solid #cbd5e1; padding: 6px 4px; text-align: center; }
+    th { background: #f8fafc; font-weight: 700; position: sticky; top: 0; z-index: 1; }
+    .active-row { background: #fef08a !important; font-weight: bold; border: 2px solid #eab308; }
+    .done-row { background: #f0fdf4; }
+    .me-row { outline: 2px solid #2563eb; }
+    .admin-panel { display: none; background: #fff1f2; border: 2px solid #fda4af; }
+    .ctrl-btn { padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-right: 6px; margin-top: 6px; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🏫 배곧초 실시간 학년·업무 배정 시스템</h1>
+  <button class="admin-btn" onclick="toggleAdmin()">🛠️ 관리자 제어판</button>
+</header>
+
+<!-- 관리자 전용 제어판 -->
+<div id="admin-panel" class="card admin-panel">
+  <h3 style="margin-top:0; color:#be123c;">🛠️ 관리자 제어판 (담당 교사용)</h3>
+  <div>
+    <strong>단계 전환 및 실시간 제어:</strong><br>
+    <button class="ctrl-btn" style="background:#0284c7; color:white;" onclick="setStage0()">📝 0단계: 점수 입력 모드 열기</button>
+    <button class="ctrl-btn" style="background:#2563eb; color:white;" onclick="startStage1()">① 1단계: 학년 배정 확정 & 선택 시작</button>
+    <button class="ctrl-btn" style="background:#7c3aed; color:white;" onclick="startStage2()">② 2단계: 업무 배정 재정렬 & 선택 시작</button>
+    <br>
+    <button class="ctrl-btn" style="background:#eab308; color:black;" onclick="forceSkipTurn()">⏭️ 현재 순번 강제 넘기기</button>
+    <button class="ctrl-btn" style="background:#dc2626; color:white;" onclick="undoLastTurn()">↩️ 직전 선택 취소(1칸 뒤로)</button>
+    <button class="ctrl-btn" style="background:#16a34a; color:white;" onclick="exportCSV()">📊 결과 엑셀(CSV) 다운로드</button>
+    <button class="ctrl-btn" style="background:#475569; color:white;" onclick="loadSampleData()">📋 배곧초 샘플 명단 불러오기</button>
+    <button class="ctrl-btn" style="background:#991b1b; color:white;" onclick="clearAllData()">🗑️ 전체 데이터 초기화</button>
+  </div>
+</div>
+
+<!-- 상단 본인 선택 및 현재 진행 상태 바 -->
+<div class="status-bar">
+  <div>
+    <label for="user-select"><strong>👤 내 이름 선택 (내 차례 알림용): </strong></label>
+    <select id="user-select" style="padding:6px 10px; font-size:0.95rem; border-radius:6px; border:1px solid #94a3b8;">
+      <option value="">-- 본인 성함을 선택하세요 --</option>
+    </select>
+  </div>
+  <div id="stage-badge" style="font-weight:bold; color:#0f172a; font-size:1rem;">대기 중</div>
+  <div id="turn-info" class="turn-badge">연결 중...</div>
+</div>
+
+<!-- 내 차례 알림 배너 -->
+<div id="my-turn-alert" class="my-turn-banner" style="display:none;">
+  🔔 선생님 차례입니다! 왼쪽의 활성화된 버튼 중에서 희망하시는 학년/업무를 클릭해 주세요.
+</div>
+
+<!-- [0단계 전용] 교사 직접 점수 입력창 (1, 2단계 시작 시 자동으로 숨겨짐) -->
+<div id="input-section" class="card" style="border: 2px solid #38bdf8;">
+  <h3 style="margin-top:0; color:#0369a1;">📝 [0단계] 선생님 점수 및 경력 직접 입력 / 수정</h3>
+  <div class="form-grid">
+    <div class="form-group">
+      <label>성명 (복직자는 '(복직)홍길동')</label>
+      <input type="text" id="in-name" placeholder="예: 김건">
+    </div>
+    <div class="form-group">
+      <label>최근 3년 합산 점수</label>
+      <input type="number" step="0.1" id="in-score" placeholder="예: 10">
+    </div>
+    <div class="form-group">
+      <label>본교경력 (26.2.28.기준)</label>
+      <input type="number" step="0.01" id="in-school" placeholder="예: 2 또는 1.07">
+    </div>
+    <div class="form-group">
+      <label>교육총경력 (26.2.28.기준)</label>
+      <input type="number" step="0.01" id="in-total" placeholder="예: 7.08">
+    </div>
+    <div class="form-group">
+      <label>휴직 / 내신 구분</label>
+      <select id="in-transfer">
+        <option value="X">X (해당없음)</option>
+        <option value="복직">복직</option>
+        <option value="일반내신">일반내신 / 전보</option>
+        <option value="1년휴직">1년휴직</option>
+        <option value="만기">만기</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>배정우대 여부</label>
+      <select id="in-priority">
+        <option value="X">X (해당없음)</option>
+        <option value="우대1">우대1</option>
+        <option value="우대2">우대2</option>
+        <option value="우대2,업무1">우대2,업무1</option>
+        <option value="우대3,업무1">우대3,업무1</option>
+        <option value="우대4">우대4</option>
+        <option value="업무1">업무1</option>
+        <option value="업무2">업무2</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>부장 희망 여부</label>
+      <select id="in-head">
+        <option value="X">X (해당없음)</option>
+        <option value="1학년부장">1학년부장</option>
+        <option value="2학년부장">2학년부장</option>
+        <option value="3학년부장">3학년부장</option>
+        <option value="4학년부장">4학년부장</option>
+        <option value="5학년부장">5학년부장</option>
+        <option value="6학년부장">6학년부장</option>
+        <option value="교무부장">교무부장</option>
+        <option value="연구부장">연구부장</option>
+        <option value="정보부장">정보부장</option>
+        <option value="체육부장">체육부장</option>
+        <option value="인성부장">인성부장</option>
+        <option value="지역협력부장">지역협력부장</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <button onclick="submitMyScore()" style="width:100%; padding:9px; background:#0284c7; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
+        💾 내 정보 등록/수정
+      </button>
+    </div>
+  </div>
+  <div class="guide-box">
+    💡 <strong>입력 안내:</strong> 최근 3년간 학년 점수 합산 입력 (<strong>1학년: 4점 / 2~4학년: 3점 / 5학년: 4점 / 6학년: 5점 / 전담희망: 2점 / 전담비희망: 5점</strong>) | 경력은 1년 1개월 = <code>1.01</code>, 1년 11개월 = <code>1.11</code> 형태로 입력해 주세요. 이미 등록한 분이 다시 같은 성함으로 저장하면 <strong>자동으로 덮어쓰기(수정)</strong> 되며, 아래 표에서 내 실시간 순위가 즉시 갱신됩니다.
+  </div>
+</div>
+
+<!-- 메인 실시간 대시보드 (좌: 선택 버튼 / 우: 전체 순위 및 실시간 배정 현황판) -->
+<div class="main-layout">
+  <!-- 왼쪽: 학년 및 업무 선택 버튼 -->
+  <div>
+    <div class="card">
+      <h3 style="margin-top:0;">1단계: 학년 및 전담 선택 현황</h3>
+      <div id="grade-container" class="btn-grid"></div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0;">2단계: 교무 분장 업무 선택 현황 <small style="color:#c2410c;">(주황=전담전용)</small></h3>
+      <div id="duty-container" class="btn-grid"></div>
+    </div>
+  </div>
+
+  <!-- 오른쪽: 실시간 전체 교원 순위 및 선택 중계 표 -->
+  <div class="card" style="overflow-x:auto; max-height: 820px; overflow-y: auto;">
+    <h3 style="margin-top:0;">📋 실시간 전체 순위 및 배정 중계판 <small style="font-weight:normal; color:#64748b;">(위에서부터 순서대로 진행됩니다)</small></h3>
+    <table>
+      <thead>
+        <tr>
+          <th>순위</th><th>성명</th><th>점수</th><th>본교</th><th>총경력</th>
+          <th>내신/휴직</th><th>우대</th><th>부장</th><th>1단계 학년</th><th>2단계 업무</th><th>상태</th>
+        </tr>
+      </thead>
+      <tbody id="roster-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  // =========================================================================
+  // [필수] 1단계에서 복사한 본인의 Firebase 설정값을 여기에 붙여넣으세요!
+  // =========================================================================
+  const firebaseConfig = {
+   apiKey: "AIzaSyCL3gIyvJ8I_xKKJaeAujz2rjYJeD7Be7I",
+   authDomain: "baegot-school.firebaseapp.com",
+   databaseURL: "https://baegot-school-default-rtdb.firebaseio.com",
+   projectId: "baegot-school",
+   storageBucket: "baegot-school.firebasestorage.app",
+   messagingSenderId: "903547507115",
+   appId: "1:903547507115:web:d5614b1e51d5861f5402ee"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  const DEFAULT_GRADE_LIMITS = {
+    "1학년": 8, "2학년": 8, "3학년": 9, "4학년": 9, "5학년": 11, "6학년": 10,
+    "전담(놀이)": 1, "전담1(2놀이,4영어)": 1, "전담2(5영어)": 1, "전담3(6영어)": 1,
+    "전담4(5영어,6영어)": 1, "전담5(5체육)": 1, "전담6(5체육,6체육)": 1,
+    "전담7(6체육)": 1, "전담8(2놀이,3체육)": 1, "전담9(4체육)": 1
+  };
+
+  const ALL_DUTIES = [
+    "나이스1", "나이스2", "교육홍보", "교과서스마트통신", "전자공", "학생평가",
+    "기초학력1", "기초학력2", "글로벌교육", "장학", "학생동아리", "독서교육",
+    "생명존중,학생봉사", "(전담)학교폭력1", "(전담)학교폭력2", "(전담)학교폭력3",
+    "교통안전", "시민교육", "생활안전1", "생활안전2", "(전담)아동장치안전", "정보통신윤리",
+    "sw교육", "스마트기기관련", "물품구입수리", "(전담)학교방송", "정보보안", "학교스포츠클럽",
+    "(전담)paps담당", "(3,4담임)생존수영", "(전담)학교문화예술", "(전담)문화예술교육",
+    "(전담)학생선수", "학생자치1", "학생자치2", "(전담)학부모회", "환경교육", "환경관리", "학교축제", "마을자치"
+  ];
+
+  let state = null;
+  let myName = "";
+
+  db.ref("baegotDraft").on("value", (snap) => {
+    state = snap.val();
+    if (!state) {
+      loadSampleData();
+      return;
+    }
+    render();
+  });
+
+  document.getElementById("user-select").addEventListener("change", (e) => {
+    myName = e.target.value;
+    // 내 이름을 선택하면 0단계 입력 폼에도 내 기존 정보를 자동으로 채워줌 (수정 편의성)
+    if (state && state.teachers) {
+      const me = state.teachers.find(t => t.name === myName);
+      if (me) {
+        document.getElementById("in-name").value = me.name;
+        document.getElementById("in-score").value = me.score;
+        document.getElementById("in-school").value = me.schoolCar;
+        document.getElementById("in-total").value = me.totalCar;
+        document.getElementById("in-transfer").value = me.transferF || "X";
+        document.getElementById("in-priority").value = me.priorityG || "X";
+        document.getElementById("in-head").value = me.headHope || "X";
+      }
+    }
+    render();
+  });
+
+  function toggleAdmin() {
+    const panel = document.getElementById("admin-panel");
+    if (panel.style.display === "block") {
+      panel.style.display = "none";
+    } else {
+      const pw = prompt("관리자 비밀번호를 입력하세요 (기본값: 1234)");
+      if (pw === "1234") panel.style.display = "block";
+      else if (pw !== null) alert("비밀번호가 일치하지 않습니다.");
+    }
+  }
+
+  // =========================================================================
+  // 0단계: 교사 직접 점수 등록/수정 (입력 즉시 학년 배정 순위로 자동 정렬!)
+  // =========================================================================
+  function submitMyScore() {
+    if (state && state.stage !== 0) {
+      alert("현재는 점수 입력 기간이 마감되어 수정할 수 없습니다.");
+      return;
+    }
+    const name = document.getElementById("in-name").value.trim();
+    const score = parseFloat(document.getElementById("in-score").value) || 0;
+    const schoolCar = parseFloat(document.getElementById("in-school").value) || 0;
+    const totalCar = parseFloat(document.getElementById("in-total").value) || 0;
+    const transferF = document.getElementById("in-transfer").value;
+    const priorityG = document.getElementById("in-priority").value;
+    const headHope = document.getElementById("in-head").value;
+
+    if (!name) {
+      alert("성함을 입력해 주세요!");
+      return;
+    }
+
+    let list = (state && state.teachers) ? [...state.teachers] : [];
+    const existIdx = list.findIndex(t => t.name === name);
+
+    // 학년부장은 등록 즉시 학년과 해당없음 표시, 기타부장은 부장업무 해당없음 자동 세팅
+    let autoGrade = "";
+    let autoDuty = "";
+    if (headHope.includes("부장")) {
+      const m = headHope.match(/([1-6])학년/);
+      if (m) autoGrade = `${m[1]}학년`;
+      autoDuty = "해당없음";
+    }
+
+    const newEntry = {
+      name, score, schoolCar, totalCar, transferF, priorityG, headHope,
+      grade: existIdx >= 0 ? (autoGrade || list[existIdx].grade) : autoGrade,
+      duty: existIdx >= 0 ? (autoDuty || list[existIdx].duty) : autoDuty
+    };
+
+    if (existIdx >= 0) {
+      list[existIdx] = newEntry;
+    } else {
+      list.push(newEntry);
+    }
+
+    // 입력 즉시 1단계 기준으로 실시간 순위 자동 재산출
+    const sorted = sortTeachers(list, "GRADE");
+    myName = name;
+
+    db.ref("baegotDraft").update({
+      stage: 0,
+      teachers: sorted,
+      gradeLimits: (state && state.gradeLimits) ? state.gradeLimits : DEFAULT_GRADE_LIMITS
+    }).then(() => {
+      alert(`✅ [${name}] 선생님의 정보가 저장되었으며, 실시간 순위가 반영되었습니다!`);
+    });
+  }
+
+  // =========================================================================
+  // 배곧초 우선순위 알고리즘
+  // =========================================================================
+  function getGradePriorityScore(t) {
+    const hText = (t.headHope || "").trim();
+    const gText = (t.priorityG || "").trim();
+    const fText = (t.transferF || "").trim();
+
+    if (hText.includes("부장")) return 10;
+    if (gText.includes("우대1")) return 10;
+    if (gText.includes("우대2")) return 20;
+    if (gText.includes("우대3")) return 30;
+    if (gText.includes("우대4")) return 40;
+
+    if (fText.includes("일반내신") || fText.includes("전보")) return 60;
+    if (fText.includes("1년휴직")) return 65;
+    if (fText.includes("만기")) return 70;
+    return 50;
+  }
+
+  function getDutyPriorityScore(t) {
+    const hText = (t.headHope || "").trim();
+    const gText = (t.priorityG || "").trim();
+    const fText = (t.transferF || "").trim();
+    const gradeStr = (t.grade || "").trim();
+
+    if (hText.includes("부장")) return 5;
+    if (gText.includes("업무1")) return 10;
+    if (gText.includes("업무2")) return 20;
+
+    if (fText.includes("만기")) return 70;
+    if (fText.includes("일반내신") || fText.includes("전보") || fText.includes("타시도")) return 60;
+
+    if (gradeStr === "5학년" || gradeStr === "5") return 30;
+    if (["2학년", "3학년", "4학년", "2", "3", "4"].includes(gradeStr)) return 40;
+
+    if (fText.includes("복직")) return 50;
+    return 45;
+  }
+
+  function sortTeachers(list, type) {
+    return list.sort((a, b) => {
+      const pA = type === "GRADE" ? getGradePriorityScore(a) : getDutyPriorityScore(a);
+      const pB = type === "GRADE" ? getGradePriorityScore(b) : getDutyPriorityScore(b);
+      if (pA !== pB) return pA - pB;
+
+      const sA = parseFloat(a.score) || 0;
+      const sB = parseFloat(b.score) || 0;
+      if (sA !== sB) return sB - sA;
+
+      const scA = parseFloat(a.schoolCar) || 0;
+      const scB = parseFloat(b.schoolCar) || 0;
+      if (scA !== scB) return scB - scA;
+
+      const tcA = parseFloat(a.totalCar) || 0;
+      const tcB = parseFloat(b.totalCar) || 0;
+      return tcB - tcA;
+    }).map((t, idx) => ({ ...t, rank: idx + 1 }));
+  }
+
+  function findNextActiveTurn(teachers, stage, startIdx) {
+    for (let i = startIdx; i < teachers.length; i++) {
+      if (stage === 1 && !teachers[i].grade) return i;
+      if (stage === 2 && !teachers[i].duty) return i;
+    }
+    return teachers.length;
+  }
+
+  // =========================================================================
+  // 관리자 제어 함수
+  // =========================================================================
+  function setStage0() {
+    db.ref("baegotDraft/stage").set(0);
+    alert("📝 0단계(점수 자율 입력 모드)가 열렸습니다.");
+  }
+
+  function startStage1() {
+    if (!state || !state.teachers || state.teachers.length === 0) return;
+    let sorted = sortTeachers([...state.teachers], "GRADE");
+
+    sorted = sorted.map(t => {
+      const h = (t.headHope || "").trim();
+      if (h.includes("부장")) {
+        const match = h.match(/([1-6])학년/);
+        return {
+          ...t,
+          grade: match ? `${match[1]}학년` : (t.grade || ""),
+          duty: "해당없음"
+        };
+      }
+      return t;
+    });
+
+    const firstTurn = findNextActiveTurn(sorted, 1, 0);
+    db.ref("baegotDraft").update({
+      stage: 1,
+      teachers: sorted,
+      currentTurn: firstTurn
+    });
+    alert("✅ 1단계 학년 선택이 시작되었습니다! 위에서부터 순서대로 버튼이 활성화됩니다.");
+  }
+
+  function startStage2() {
+    if (!state || !state.teachers) return;
+    let sorted = sortTeachers([...state.teachers], "DUTY");
+    sorted = sorted.map(t => (t.headHope || "").includes("부장") ? { ...t, duty: "해당없음" } : t);
+
+    const firstTurn = findNextActiveTurn(sorted, 2, 0);
+    db.ref("baegotDraft").update({
+      stage: 2,
+      teachers: sorted,
+      currentTurn: firstTurn
+    });
+    alert("✅ 2단계 업무 배정 순위 재정렬 및 선택이 시작되었습니다!");
+  }
+
+  function forceSkipTurn() {
+    if (!state) return;
+    const next = findNextActiveTurn(state.teachers, state.stage, state.currentTurn + 1);
+    db.ref("baegotDraft/currentTurn").set(next);
+  }
+
+  function undoLastTurn() {
+    if (!state || state.currentTurn <= 0) return;
+    const prevIdx = state.currentTurn - 1;
+    const updates = {};
+    if (state.stage === 1) updates[`baegotDraft/teachers/${prevIdx}/grade`] = "";
+    if (state.stage === 2) updates[`baegotDraft/teachers/${prevIdx}/duty`] = "";
+    updates["baegotDraft/currentTurn"] = prevIdx;
+    db.ref().update(updates);
+  }
+
+  function clearAllData() {
+    if (!confirm("정말 모든 명단 데이터를 초기화하시겠습니까?")) return;
+    db.ref("baegotDraft").set({
+      stage: 0,
+      currentTurn: 0,
+      gradeLimits: DEFAULT_GRADE_LIMITS,
+      teachers: []
+    });
+  }
+
+  function loadSampleData() {
+    const sample = [
+      { name: "이오네", score: 14, schoolCar: 3, totalCar: 12.03, transferF: "X", priorityG: "X", headHope: "6학년부장", grade: "6학년", duty: "해당없음" },
+      { name: "유지훈", score: 11, schoolCar: 4, totalCar: 6.08, transferF: "X", priorityG: "X", headHope: "5학년부장", grade: "5학년", duty: "해당없음" },
+      { name: "김건", score: 10, schoolCar: 2, totalCar: 7.08, transferF: "X", priorityG: "X", headHope: "정보부장", grade: "", duty: "해당없음" },
+      { name: "정미경", score: 12, schoolCar: 3, totalCar: 32.06, transferF: "X", priorityG: "우대2,업무1", headHope: "X", grade: "", duty: "" },
+      { name: "임진아", score: 3, schoolCar: 1, totalCar: 33.08, transferF: "X", priorityG: "우대2,업무1", headHope: "X", grade: "", duty: "" },
+      { name: "지인욱", score: 6, schoolCar: 3, totalCar: 26.10, transferF: "X", priorityG: "우대3,업무1", headHope: "X", grade: "", duty: "" },
+      { name: "이진림", score: 4, schoolCar: 2, totalCar: 27.06, transferF: "X", priorityG: "우대4", headHope: "X", grade: "", duty: "" },
+      { name: "박소희", score: 13, schoolCar: 4, totalCar: 8.03, transferF: "X", priorityG: "X", headHope: "X", grade: "", duty: "" },
+      { name: "(복직)손병훈", score: 6, schoolCar: 2, totalCar: 13.11, transferF: "복직", priorityG: "X", headHope: "X", grade: "", duty: "" },
+      { name: "(복직)이혜민", score: 6.7, schoolCar: 1.07, totalCar: 13.11, transferF: "복직", priorityG: "업무2", headHope: "X", grade: "", duty: "" },
+      { name: "반세지", score: 13, schoolCar: 4, totalCar: 21.00, transferF: "일반내신", priorityG: "X", headHope: "X", grade: "", duty: "" }
+    ];
+    const sorted = sortTeachers(sample, "GRADE");
+    db.ref("baegotDraft").set({
+      stage: 0,
+      currentTurn: 0,
+      gradeLimits: DEFAULT_GRADE_LIMITS,
+      teachers: sorted
+    });
+  }
+
+  // =========================================================================
+  // 실시간 선택 처리
+  // =========================================================================
+  function chooseGrade(gradeKey) {
+    if (!confirm(`[${gradeKey}]을(를) 최종 선택하시겠습니까?`)) return;
+    const idx = state.currentTurn;
+    const updatedTeachers = [...state.teachers];
+    updatedTeachers[idx].grade = gradeKey;
+
+    const nextTurn = findNextActiveTurn(updatedTeachers, 1, idx + 1);
+    db.ref("baegotDraft").update({
+      teachers: updatedTeachers,
+      currentTurn: nextTurn
+    });
+  }
+
+  function chooseDuty(dutyName) {
+    if (!confirm(`[${dutyName}] 업무를 최종 선택하시겠습니까?`)) return;
+    const idx = state.currentTurn;
+    const updatedTeachers = [...state.teachers];
+    updatedTeachers[idx].duty = dutyName;
+
+    const nextTurn = findNextActiveTurn(updatedTeachers, 2, idx + 1);
+    db.ref("baegotDraft").update({
+      teachers: updatedTeachers,
+      currentTurn: nextTurn
+    });
+  }
+
+  // =========================================================================
+  // 화면 렌더링
+  // =========================================================================
+  function render() {
+    if (!state) return;
+    const teachers = state.teachers || [];
+
+    // 0단계 입력 폼 표시 여부
+    document.getElementById("input-section").style.display = (state.stage === 0) ? "block" : "none";
+
+    // 이름 선택 드롭다운 갱신
+    const select = document.getElementById("user-select");
+    const prevSelected = myName || select.value;
+    select.innerHTML = `<option value="">-- 본인 성함을 선택하세요 --</option>`;
+    teachers.forEach(t => {
+      const opt = document.createElement("option");
+      opt.value = t.name;
+      opt.textContent = `${t.rank}순위: ${t.name} (${t.score}점)`;
+      if (t.name === prevSelected) opt.selected = true;
+      select.appendChild(opt);
+    });
+
+    // 상태 배지 및 현재 차례 표시
+    const stageBadge = document.getElementById("stage-badge");
+    const turnInfo = document.getElementById("turn-info");
+    const activeTeacher = teachers[state.currentTurn];
+
+    stageBadge.textContent = state.stage === 0 ? "📝 0단계: 점수 자율 입력 및 실시간 순위 확인 중" :
+                             state.stage === 1 ? "🟢 1단계: 학년 실시간 선택 진행 중" : "🟣 2단계: 업무 실시간 선택 진행 중";
+
+    if (state.stage === 0) {
+      turnInfo.textContent = `현재 등록 인원: 총 ${teachers.length}명 (실시간 순위 자동 정렬 중)`;
+    } else if (!activeTeacher) {
+      turnInfo.textContent = "🎉 현재 단계의 모든 배정이 완료되었습니다!";
+    } else {
+      turnInfo.textContent = `⚡ 현재 선택 차례: ${activeTeacher.rank}순위 [${activeTeacher.name}] 선생님`;
+    }
+
+    const isMyTurn = activeTeacher && myName === activeTeacher.name && state.stage > 0;
+    document.getElementById("my-turn-alert").style.display = isMyTurn ? "block" : "none";
+
+    // 학년 버튼 렌더링
+    const gradeBox = document.getElementById("grade-container");
+    gradeBox.innerHTML = "";
+    Object.entries(state.gradeLimits || DEFAULT_GRADE_LIMITS).forEach(([gName, limit]) => {
+      const cnt = teachers.filter(t => t.grade === gName).length;
+      const isFull = cnt >= limit;
+      const btn = document.createElement("button");
+      btn.className = "choice-btn";
+      btn.innerHTML = `${gName}<br><span style="font-size:0.78rem; color:${isFull ? '#dc2626' : '#2563eb'};">(${cnt}/${limit}명)</span>`;
+      btn.disabled = !(isMyTurn && state.stage === 1) || isFull;
+      btn.onclick = () => chooseGrade(gName);
+      gradeBox.appendChild(btn);
+    });
+
+    // 업무 버튼 렌더링
+    const dutyBox = document.getElementById("duty-container");
+    dutyBox.innerHTML = "";
+    const myGrade = activeTeacher ? (activeTeacher.grade || "") : "";
+    const isJeondamTeacher = myGrade.startsWith("전담");
+
+    ALL_DUTIES.forEach(dName => {
+      const takenBy = teachers.find(t => t.duty === dName);
+      const isJeondamDuty = dName.startsWith("(전담)");
+      const btn = document.createElement("button");
+      btn.className = "choice-btn" + (isJeondamDuty ? " jeondam-duty" : "");
+      btn.innerHTML = `${dName}<br><span style="font-size:0.72rem;">${takenBy ? '❌ ' + takenBy.name : '⭕ 선택가능'}</span>`;
+
+      let canClick = isMyTurn && state.stage === 2 && !takenBy;
+      if (canClick) {
+        if (isJeondamTeacher && !isJeondamDuty) canClick = false;
+        if (!isJeondamTeacher && isJeondamDuty) canClick = false;
+      }
+      btn.disabled = !canClick;
+      btn.onclick = () => chooseDuty(dName);
+      dutyBox.appendChild(btn);
+    });
+
+    // 오른쪽 전체 순위 및 배정 현황판 렌더링
+    const tbody = document.getElementById("roster-tbody");
+    tbody.innerHTML = "";
+    teachers.forEach((t, idx) => {
+      const tr = document.createElement("tr");
+      const isCurrent = state.stage > 0 && idx === state.currentTurn;
+      const isDone = (state.stage === 1 && t.grade) || (state.stage === 2 && t.duty);
+      
+      let rowClass = "";
+      if (isCurrent) rowClass = "active-row";
+      else if (isDone) rowClass = "done-row";
+      if (myName && t.name === myName) rowClass += " me-row";
+      tr.className = rowClass.trim();
+
+      tr.innerHTML = `
+        <td><strong>${t.rank}</strong></td>
+        <td><strong>${t.name}</strong></td>
+        <td>${t.score}</td>
+        <td>${t.schoolCar}</td>
+        <td>${t.totalCar}</td>
+        <td>${t.transferF}</td>
+        <td>${t.priorityG}</td>
+        <td>${t.headHope}</td>
+        <td style="color:#1d4ed8; font-weight:bold;">${t.grade || "-"}</td>
+        <td style="color:#7c3aed; font-weight:bold;">${t.duty || "-"}</td>
+        <td>${state.stage === 0 ? "등록완료" : (isCurrent ? "⚡선택중" : (isDone ? "✅완료" : "대기"))}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function exportCSV() {
+    if (!state || !state.teachers) return;
+    let csv = "\uFEFF순위,성명,점수,본교경력,총경력,휴직내신,배정우대,부장희망,배정학년,배정업무\n";
+    state.teachers.forEach(t => {
+      csv += `${t.rank},${t.name},${t.score},${t.schoolCar},${t.totalCar},"${t.transferF}","${t.priorityG}","${t.headHope}","${t.grade}","${t.duty}"\n`;
+    });
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "2026학년도_배곧초_학년업무배정결과.csv";
+    link.click();
+  }
+</script>
+</body>
+</html>
