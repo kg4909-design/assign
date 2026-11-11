@@ -195,19 +195,10 @@ th{background:#f4f7ff;font-weight:700;position:sticky;top:0;z-index:1}
 
   <div class="cfg blue">
     <h4 style="color:#1e3a8a">⚖️ 인사자문위원회 배정우대 관리</h4>
-    <p class="note">일반 교사는 배정우대를 입력할 수 없습니다. 규정(제13·14·28·29조)에 따라 관리자가 우대 규칙을 정하고 대상자를 체크하면 즉시 순위에 반영됩니다.</p>
+    <p class="note">순위 원칙: ① 본교에 남는 교사 → ② 일반전보내신 → ③ 만기 전보자. 우대·점수는 같은 묶음 안에서만 적용됩니다. 일반 교사는 배정우대를 입력할 수 없습니다. 규정(제13·14·28·29조)에 따라 관리자가 우대 규칙을 정하고 대상자를 체크하면 즉시 순위에 반영됩니다.</p>
 
     <div style="background:#fff;padding:12px;border-radius:var(--r-s);border:1px solid var(--line);margin-bottom:12px">
-      <strong style="font-size:.88rem">📌 1. 일반전보내신 교사 처리 방식 (제13조 11항 ↔ 제14조 충돌)</strong>
-      <p class="note" style="margin-top:4px">우대 대상이면서 일반전보내신을 낸 교사를 어떻게 볼지 인사자문위원회 결정에 맞춰 선택하세요.</p>
-      <select id="policy" class="inp" onchange="setPolicy(this.value)">
-        <option value="LAST">일반전보내신은 우대와 상관없이 최후순위 (제13조 11항, 제17조 4항)</option>
-        <option value="PRIORITY">우대 대상이면 내신자여도 우대 우선 (제14조 "경합에 불구하고")</option>
-      </select>
-    </div>
-
-    <div style="background:#fff;padding:12px;border-radius:var(--r-s);border:1px solid var(--line);margin-bottom:12px">
-      <strong style="font-size:.88rem">📌 2. 우대 규정 항목·가중치 (숫자가 작을수록 먼저, 일반교사=50)</strong>
+      <strong style="font-size:.88rem">📌 1. 우대 규정 항목·가중치 (숫자가 작을수록 먼저, 일반교사=50)</strong>
       <div class="row">
         <select id="rule-type" class="inp"><option value="GRADE">[1단계] 학년우대</option><option value="DUTY">[2단계] 업무우대</option></select>
         <input class="inp" id="rule-code" placeholder="약칭 (예: 우대5)" style="width:120px">
@@ -220,7 +211,7 @@ th{background:#f4f7ff;font-weight:700;position:sticky;top:0;z-index:1}
     </div>
 
     <div style="background:#fff;padding:12px;border-radius:var(--r-s);border:1px solid var(--line)">
-      <strong style="font-size:.88rem">☑️ 3. 교원별 우대 대상자 체크</strong>
+      <strong style="font-size:.88rem">☑️ 2. 교원별 우대 대상자 체크</strong>
       <div class="tw" style="max-height:320px;overflow:auto;margin-top:8px">
         <table style="min-width:640px">
           <thead><tr><th>순위</th><th>성명</th><th>점수</th><th>내신</th><th>부장</th><th>학년우대(제13·14조)</th><th>업무우대(제28·29조)</th></tr></thead>
@@ -316,14 +307,28 @@ th{background:#f4f7ff;font-weight:700;position:sticky;top:0;z-index:1}
   <h3 style="color:#0369a1">📝 [0단계] 점수·경력 입력/수정</h3>
   <div class="form-grid">
     <div class="fg"><label>성명 (복직자는 '(복직)홍길동')</label><input type="text" id="in-name" placeholder="예: 김건"></div>
-    <div class="fg"><label>최근 3년 합산 점수</label><input type="number" inputmode="decimal" step="0.1" id="in-score"></div>
+    <div class="fg"><label>최근 3년 합산 점수</label><input type="number" inputmode="decimal" step="0.1" id="in-score" oninput="calcLeave()"></div>
     <div class="fg"><label>본교경력 (27.2.28.기준)</label><input type="number" inputmode="decimal" step="0.01" id="in-school" placeholder="1년1개월=1.01"></div>
     <div class="fg"><label>교육총경력 (27.2.28.기준)</label><input type="number" inputmode="decimal" step="0.01" id="in-total" placeholder="7년8개월=7.08"></div>
     <div class="fg"><label>휴직 / 내신 구분</label>
-      <select id="in-transfer">
-        <option value="X">X (해당없음)</option><option value="복직">복직교사</option>
-        <option value="1년휴직">유예 / 1년이상 휴직교사</option><option value="일반내신">일반전보내신 제출교사</option><option value="만기">만기 전보자</option>
+      <select id="in-transfer" onchange="calcLeave()">
+        <option value="X">X (해당없음)</option>
+        <option value="복직">복직교사</option>
+        <option value="6개월이상휴직">6개월 이상 휴직 (당해점수 1/2)</option>
+        <option value="6개월미만휴직">6개월 미만 휴직 (점수 전체)</option>
+        <option value="유예">유예교사</option>
+        <option value="1년휴직">1년 휴직 (학년·업무 제외)</option>
+        <option value="일반내신">일반전보내신 제출교사</option>
+        <option value="만기">만기 전보자 (학년·업무 제외)</option>
       </select></div>
+    <div class="fg" id="leave-wrap" style="display:none"><label>당해(올해) 학년점수</label>
+      <select id="in-leave" onchange="calcLeave()">
+        <option value="">선택하세요</option>
+        <option value="2">교과전담 희망 (2점)</option>
+        <option value="3">2~4학년 (3점)</option>
+        <option value="4">1·5학년 (4점)</option>
+        <option value="5">6학년·임의배정 (5점)</option>
+      </select><div id="leave-prev" class="note" style="margin:4px 0 0"></div></div>
     <div class="fg"><label>부장 희망 (제16조)</label>
       <select id="in-head">
         <option value="X">X (해당없음)</option>
@@ -336,7 +341,7 @@ th{background:#f4f7ff;font-weight:700;position:sticky;top:0;z-index:1}
   </div>
   <div class="guide">
     💡 <strong>2025.12.01. 개정 규정 기준 (제13조)</strong><br>
-    • <strong>3년 학년점수:</strong> 1학년 4 · 2~4학년 3 · 5학년 4 · 6학년 5 · 교과전담 희망 2 · 임의배정 5 (제13조 4항). 임의배정 우대(제13조 12항)로 학년·업무 중 택1을 쓴 경우 +1점 가산. 당해 6개월 이상 휴직은 당해 점수의 1/2 (5항)<br>
+    • <strong>3년 학년점수:</strong> 1학년 4 · 2~4학년 3 · 5학년 4 · 6학년 5 · 교과전담 희망 2 · 임의배정 5 (제13조 4항). 임의배정 우대(제13조 12항)로 학년·업무 중 택1을 쓴 경우 +1점 가산. 6개월 이상 휴직은 '당해 학년점수'를 고르면 자동으로 1/2 반영(5항), 합산 점수는 감산 전 값(당해 점수 전체 포함)을 입력<br>
     • <strong>동점:</strong> 본교 근무경력 → 교육 총경력 순 (9항)<br>
     • <strong>배정우대·일반내신 처리:</strong> 교감선생님이 관리자 페이지에서 설정합니다. (수정해도 기존 우대 내역은 유지됩니다)
   </div>
@@ -441,15 +446,23 @@ document.getElementById("user-select").addEventListener("change", e => {
   const me = state && state.teachers && state.teachers.find(t => t.name === myName);
   if (me) {
     document.getElementById("in-name").value = me.name;
-    document.getElementById("in-score").value = me.score;
+    document.getElementById("in-score").value = me.scoreRaw != null ? me.scoreRaw : me.score;
     document.getElementById("in-school").value = me.schoolCar;
     document.getElementById("in-total").value = me.totalCar;
     document.getElementById("in-transfer").value = me.transferF || "X";
     document.getElementById("in-head").value = me.headHope || "X";
+    document.getElementById("in-leave").value = me.leaveYear ? String(me.leaveYear) : "";
+    calcLeave();
   }
   render();
 });
 
+function calcLeave(){
+  const on = document.getElementById("in-transfer").value === "6개월이상휴직";
+  document.getElementById("leave-wrap").style.display = on ? "block" : "none";
+  const raw = parseFloat(document.getElementById("in-score").value) || 0, y = parseFloat(document.getElementById("in-leave").value) || 0;
+  document.getElementById("leave-prev").textContent = !on ? "" : y ? `자동 계산: ${raw} − ${y}/2 = ${raw - y / 2}점` : "당해 학년점수를 선택하세요";
+}
 function toggleAdmin(){
   const p = document.getElementById("admin");
   if (p.style.display === "block") { p.style.display = "none"; return; }
@@ -490,7 +503,6 @@ const saveDuties = list => db.ref("baegotDraft/duties").set(list);
 function renderAdmin(){
   if (!state) return;
   const rules = state.priorityRules || DEFAULT_RULES, gR = rules.gradeRules || [], dR = rules.dutyRules || [];
-  document.getElementById("policy").value = state.naesinPolicy || "LAST";
   renderFix();
 
   const rl = document.getElementById("rules-list"); rl.innerHTML = "";
@@ -628,17 +640,23 @@ function submitMyScore(){
   if (state && state.stage !== 0) return alert("점수 입력 기간이 끝나 수정할 수 없습니다.");
   const name = document.getElementById("in-name").value.trim();
   if (!name) return alert("성함을 입력해 주세요.");
-  const score = parseFloat(document.getElementById("in-score").value) || 0;
+  const rawScore = parseFloat(document.getElementById("in-score").value) || 0;
   const schoolCar = parseFloat(document.getElementById("in-school").value) || 0;
   const totalCar = parseFloat(document.getElementById("in-total").value) || 0;
   const transferF = document.getElementById("in-transfer").value;
+  let score = rawScore, leaveYear = 0;
+  if (transferF === "6개월이상휴직") {
+    leaveYear = parseFloat(document.getElementById("in-leave").value) || 0;
+    if (!leaveYear) return alert("6개월 이상 휴직은 '당해 학년점수'를 선택해 주세요.");
+    score = rawScore - leaveYear / 2;
+  }
   const headHope = document.getElementById("in-head").value;
   const list = (state && state.teachers) ? [...state.teachers] : [];
   const k = list.findIndex(t => t.name === name);
   let autoGrade = "", autoDuty = "";
   if (headHope.includes("부장")) { const m = headHope.match(/([1-6])학년/); if (m) autoGrade = m[1] + "학년"; autoDuty = "해당없음"; }
   const entry = {
-    name, score, schoolCar, totalCar, transferF, headHope,
+    name, score, scoreRaw: rawScore, leaveYear, schoolCar, totalCar, transferF, headHope,
     gradePriorities: k >= 0 ? (list[k].gradePriorities || []) : [],
     dutyPriorities: k >= 0 ? (list[k].dutyPriorities || []) : [],
     grade: k >= 0 ? (autoGrade || list[k].grade || "") : autoGrade,
@@ -658,12 +676,11 @@ function gradePrio(t, rules, policy){
   const gR = (rules && rules.gradeRules) || DEFAULT_RULES.gradeRules;
   // 제13조 11항·제17조 4항: 일반전보내신은 최후순위
   if (f.includes("만기")) return 95;  // 만기 전보자: 항상 최하위
-  if (policy === "LAST" && f.includes("일반내신")) return 90;
   let best = h.includes("부장") ? 10 : 999;
   gp.forEach(c => { const r = gR.find(x => x.code === c); if (r && r.weight < best) best = r.weight; });
   if (best !== 999) return best;
   if (f.includes("일반내신") || f.includes("전보")) return 60;
-  if (f.includes("1년휴직") || f.includes("유예")) return 65;
+  if (f.includes("유예")) return 65;
   return 50;
 }
 function dutyPrio(t, rules, policy){
@@ -671,22 +688,25 @@ function dutyPrio(t, rules, policy){
   const dR = (rules && rules.dutyRules) || DEFAULT_RULES.dutyRules;
   if (h.includes("부장")) return 5;
   if (f.includes("만기")) return 95;  // 만기 전보자: 항상 최하위
-  if (policy === "LAST" && f.includes("일반내신")) return 80;
   let best = 999;
   dp.forEach(c => { const r = dR.find(x => x.code === c); if (r && r.weight < best) best = r.weight; });
   if (best !== 999) return best;
   if (f.includes("일반내신") || f.includes("전보") || f.includes("타시도")) return 60;
-  if (f.includes("1년휴직") || f.includes("유예")) return 55;
+  if (f.includes("유예")) return 55;
   if (f.includes("복직")) return 50;
   if (g === "5학년") return 30;
   if (["2학년","3학년","4학년"].includes(g)) return 40;
   return 45;
 }
+// 0: 본교에 남는 교사 / 1: 일반전보내신 / 2: 1년 휴직 / 3: 만기 전보자
+const tier = t => { const f = t.transferF || ""; return f.includes("만기") ? 3 : f.includes("1년휴직") ? 2 : f.includes("일반내신") ? 1 : 0; };
 function sortTeachers(list, type, rulesObj, policy){
   const rules = rulesObj || (state && state.priorityRules) || DEFAULT_RULES;
   const pol = policy || curPolicy();
   const fn = type === "GRADE" ? gradePrio : dutyPrio;
   return list.sort((a, b) => {
+    const ta = tier(a), tb = tier(b);
+    if (ta !== tb) return ta - tb;   // 재직 교사 → 일반내신 → 만기 순 (우대·점수보다 우선)
     const pa = fn(a, rules, pol), pb = fn(b, rules, pol);
     if (pa !== pb) return pa - pb;
     const d = (x, y) => (parseFloat(y) || 0) - (parseFloat(x) || 0);
@@ -709,6 +729,7 @@ function startStage1(){
   let s = sortTeachers([...state.teachers], "GRADE").map(t => {
     const h = (t.headHope || "").trim();
     if (t.transferF === "만기") return {...t, grade:"해당없음(만기)", duty:"해당없음(만기)"};  // 만기 전보자: 학년·업무 모두 제외
+    if (t.transferF === "1년휴직") return {...t, grade:"해당없음(휴직)", duty:"해당없음(휴직)"};  // 1년 휴직: 학년·업무 모두 제외
     if (!h.includes("부장")) return t;
     const m = h.match(/([1-6])학년/);
     return {...t, grade: m ? m[1] + "학년" : (t.grade || ""), duty: "해당없음"};
@@ -722,7 +743,7 @@ function startStage2(){
   if (!state.priorityConfirmed) return alert("⚠️ 배정우대 확인 체크가 해제되어 있습니다.");
   const noGrade = state.teachers.filter(t => !t.grade).map(t => t.name);
   if (noGrade.length && !confirm(`아직 학년을 고르지 않은 교사가 있습니다 (${noGrade.join(", ")}).\n학년이 없으면 업무를 선택할 수 없습니다. 그래도 시작할까요?`)) return;
-  let s = sortTeachers([...state.teachers], "DUTY").map(t => (t.headHope || "").includes("부장") ? {...t, duty:"해당없음"} : (t.transferF === "만기" ? {...t, duty:"해당없음(만기)"} : t));
+  let s = sortTeachers([...state.teachers], "DUTY").map(t => (t.headHope || "").includes("부장") ? {...t, duty:"해당없음"} : (t.transferF === "만기" ? {...t, duty:"해당없음(만기)"} : t.transferF === "1년휴직" ? {...t, duty:"해당없음(휴직)"} : t));
   backupNow("2단계 시작 전"); log("2단계 시작");
   db.ref("baegotDraft").update({stage:2, teachers:s, currentTurn:nextTurn(s, 2, 0)});
   alert("✅ 2단계 업무 선택이 시작되었습니다. (제28조 7항 순서)");
