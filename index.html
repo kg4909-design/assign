@@ -103,19 +103,61 @@ th{background:#f4f7ff;font-weight:700;position:sticky;top:0;z-index:1}
 .mx input{width:20px;height:20px}
 .note{font-size:.8rem;color:var(--sub);margin:0 0 8px}
 
-/* 모바일: 현황표를 카드형으로 */
+/* 확인창 */
+.modal{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:center;justify-content:center;z-index:9000;padding:16px}
+.modal.on{display:flex}
+.sheet{background:#fff;border-radius:24px;padding:24px 20px;max-width:420px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.3);text-align:center;font-size:1.05rem;line-height:1.7}
+.pick{display:inline-block;background:var(--main-l);color:var(--main-d);font-weight:800;padding:2px 14px;border-radius:999px;margin:4px 0;font-size:1.2rem}
+.sheet small{display:block;color:var(--sub);font-size:.78rem;margin-top:6px}
+.sheet .btns{justify-content:center;margin-top:16px}
+.sheet .btn{flex:1}
+/* 탭·명단 */
+.hide{display:none!important}
+.tabs{display:flex;gap:6px;align-items:center;flex-wrap:wrap;position:sticky;top:0;background:#fff;z-index:5;padding-bottom:8px}
+.tabs button{border:none;background:#eef1f7;color:var(--sub);border-radius:999px;padding:8px 14px;font-weight:700;min-height:38px;cursor:pointer}
+.tabs button.on{background:var(--main);color:#fff}
+#prog{margin-left:auto;font-size:.8rem;font-weight:700;color:var(--main-d)}
+#v-rank{max-height:72vh;overflow:auto}
+.desk{display:block}.mob{display:none}
+.mc{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:var(--r-s);padding:9px 10px;margin-bottom:6px;background:#fff}
+.mr{min-width:28px;height:28px;border-radius:50%;background:var(--main-l);color:var(--main-d);font-weight:800;display:grid;place-items:center;font-size:.85rem}
+.mb{flex:1;min-width:0}
+.mn{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.ms{margin-left:auto;font-size:.78rem;font-weight:700}
+.mm{font-size:.74rem;color:var(--sub);margin:1px 0 5px}
+.ma{display:flex;gap:6px;flex-wrap:wrap}
+.ma span{padding:2px 10px;border-radius:999px;font-size:.78rem;font-weight:700}
+.c1{background:var(--main-l);color:#1e3fae}.c2{background:var(--violet-l);color:#5a2fd0}.c0{background:#eef1f7;color:#98a2bb}
+.tg{font-size:.68rem;background:var(--orange-l);color:#b45a0a;padding:1px 7px;border-radius:999px;font-weight:700}
+.gcs{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+.gc{border:1px solid var(--line);border-radius:var(--r-s);padding:10px}
+.gh{display:flex;justify-content:space-between;margin-bottom:6px}
+.gn{display:flex;flex-wrap:wrap;gap:5px}
+.nm{background:var(--main-l);color:#1e3fae;padding:2px 10px;border-radius:999px;font-size:.82rem;font-weight:700}
+.empty{color:#98a2bb;font-size:.8rem}
+.drs{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px}
+.dr{display:flex;justify-content:space-between;gap:8px;align-items:center;border:1px solid var(--line);border-radius:var(--r-s);padding:8px 12px;background:#fff}
+.dr.tk{background:#effaf3}
+.dn{font-weight:600;font-size:.84rem}.dn small{display:block;color:var(--sub);font-weight:500;font-size:.7rem}
+.dw{font-weight:800;color:#5a2fd0;white-space:nowrap}
+
+/* 모바일 (갤럭시 S21 360px 기준) */
 @media (max-width:640px){
   body{padding:8px;font-size:14px}
-  .card{padding:14px;border-radius:18px}
-  #roster{min-width:0}
-  #roster thead{display:none}
-  #roster tr{display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;border:1px solid var(--line);border-radius:var(--r-s);padding:10px;margin-bottom:8px;background:#fff}
-  #roster td{border:none;display:flex;justify-content:space-between;gap:6px;text-align:right;padding:3px 0;font-size:.82rem}
-  #roster td::before{content:attr(data-l);color:var(--sub);font-weight:600;text-align:left;white-space:nowrap}
-  #roster tr.active-row{background:#fff3b0}
-  #roster tr.done-row{background:#effaf3}
-  .bgrid{grid-template-columns:repeat(2,1fr)}
+  .card{padding:12px;border-radius:18px}
+  header{padding:12px 14px}
+  .status{padding:10px 12px;gap:6px}
+  .status>div{width:100%}
+  .status select{width:100%}
+  .desk{display:none}.mob{display:block}
+  #v-rank{max-height:none}
+  .bgrid{grid-template-columns:repeat(2,1fr);gap:6px}
+  button.ch{min-height:50px;font-size:.8rem}
   .creator small{display:none}
+  .gcs,.drs{grid-template-columns:1fr}
+  .gcs{grid-template-columns:1fr 1fr}
+  .modal{align-items:flex-end;padding:0}
+  .sheet{max-width:none;border-radius:24px 24px 0 0;padding-bottom:calc(22px + env(safe-area-inset-bottom))}
 }
 </style>
 </head>
@@ -212,6 +254,24 @@ th{background:#f4f7ff;font-weight:700;position:sticky;top:0;z-index:1}
     </div>
   </div>
 
+  <div class="cfg" style="border:2px solid #7fd1b9">
+    <h4 style="color:#0f766e">🧯 사후 수정·복구 (이의제기·오류 대응)</h4>
+    <p class="note">모든 수정 전에 자동 백업되며, 변경 내역은 기록에 남습니다. 학년을 바꾼 뒤에는 [순위 재정렬]이 필요할 수 있습니다.</p>
+    <div class="btns" style="margin-top:0">
+      <button class="btn sm" style="background:#0f766e" onclick="backupNow('수동 백업');alert('백업했습니다.')">💾 지금 백업</button>
+      <button class="btn sm" style="background:#475569" onclick="downloadJSON()">⬇️ 백업 파일(JSON)</button>
+      <button class="btn sm" style="background:var(--violet)" onclick="resortNow()">🔃 현재 단계 순위 재정렬</button>
+    </div>
+    <strong style="font-size:.85rem;display:block;margin-top:12px">① 교사별 배정 수정 (학년·업무를 직접 바꾸거나 비우기 / 차례 지정)</strong>
+    <div class="tw" style="max-height:340px;overflow:auto;margin-top:6px">
+      <table style="min-width:620px"><thead><tr><th>순위</th><th>성명</th><th>학년</th><th>업무</th><th>차례</th></tr></thead><tbody id="fix-body"></tbody></table>
+    </div>
+    <strong style="font-size:.85rem;display:block;margin-top:12px">② 백업 목록 (최근 12개)</strong>
+    <div id="backup-list" class="list"></div>
+    <strong style="font-size:.85rem;display:block;margin-top:12px">③ 변경 기록 (최근 40건)</strong>
+    <div id="log-list" class="list" style="display:block;font-size:.78rem;line-height:1.7"></div>
+  </div>
+
   <div class="cfg">
     <h4>⚙️ 1단계 학년·전담 정원 (매년 수정)</h4>
     <div class="row">
@@ -292,16 +352,31 @@ th{background:#f4f7ff;font-weight:700;position:sticky;top:0;z-index:1}
       <div id="duty-box" class="bgrid"></div>
     </div>
   </div>
-  <div class="card" style="max-height:860px;overflow-y:auto">
-    <h3>📋 실시간 순위·배정 현황 <small style="font-weight:500;color:var(--sub)">(규정 서열 자동 반영)</small></h3>
-    <div class="tw">
-    <table id="roster" style="min-width:760px">
-      <thead><tr><th>순위</th><th>성명</th><th>점수</th><th>본교</th><th>총경력</th><th>내신/휴직</th><th>학년우대</th><th>업무우대</th><th>부장</th><th>학년</th><th>업무</th><th>상태</th></tr></thead>
-      <tbody id="roster-body"></tbody>
-    </table>
+  <div class="card">
+    <div class="tabs" id="tabs">
+      <button data-v="rank" class="on" onclick="setView('rank')">📋 순위</button>
+      <button data-v="grade" onclick="setView('grade')">🏫 학년별</button>
+      <button data-v="duty" onclick="setView('duty')">🗂️ 업무별</button>
+      <span id="prog"></span>
     </div>
+    <div id="v-rank">
+      <div class="tw desk">
+        <table id="roster" style="min-width:760px">
+          <thead><tr><th>순위</th><th>성명</th><th>점수</th><th>본교</th><th>총경력</th><th>내신/휴직</th><th>학년우대</th><th>업무우대</th><th>부장</th><th>학년</th><th>업무</th><th>상태</th></tr></thead>
+          <tbody id="roster-body"></tbody>
+        </table>
+      </div>
+      <div id="roster-m" class="mob"></div>
+    </div>
+    <div id="v-grade" class="gcs hide"></div>
+    <div id="v-duty" class="drs hide"></div>
   </div>
 </div>
+
+<div id="modal" class="modal"><div class="sheet">
+  <div id="m-body"></div>
+  <div class="btns"><button id="m-no" class="btn ghost">다시 선택</button><button id="m-yes" class="btn">예, 확정</button></div>
+</div></div>
 
 <script>
 const firebaseConfig = {
@@ -416,6 +491,7 @@ function renderAdmin(){
   if (!state) return;
   const rules = state.priorityRules || DEFAULT_RULES, gR = rules.gradeRules || [], dR = rules.dutyRules || [];
   document.getElementById("policy").value = state.naesinPolicy || "LAST";
+  renderFix();
 
   const rl = document.getElementById("rules-list"); rl.innerHTML = "";
   gR.forEach(r => rl.innerHTML += `<div class="tag" style="background:var(--main-l);color:#1e3fae"><span><b>[학년:${esc(r.code)}]</b> ${esc(r.desc)} (${r.weight})</span><button onclick="removeRule('GRADE','${esc(r.code)}')">×</button></div>`);
@@ -486,6 +562,7 @@ function resortAndSave(extra){
   const rules = extra.priorityRules || state.priorityRules || DEFAULT_RULES;
   const policy = extra.naesinPolicy || state.naesinPolicy || "LAST";
   extra.teachers = sortTeachers([...(state.teachers || [])], mode, rules, policy);
+  if (state.stage > 0) extra.currentTurn = nextTurn(extra.teachers, state.stage, 0);
   return db.ref("baegotDraft").update(extra);
 }
 function setPolicy(v){ resortAndSave({naesinPolicy:v}); }
@@ -521,7 +598,9 @@ function toggleTP(i, type, code, on){
   if (!on) a = a.filter(c => c !== code);
   list[i][key] = a;
   const mode = state.stage === 2 ? "DUTY" : "GRADE";
-  db.ref("baegotDraft").update({teachers: sortTeachers(list, mode)});
+  const sl = sortTeachers(list, mode), up = {teachers: sl};
+  if (state.stage > 0) up.currentTurn = nextTurn(sl, state.stage, 0);
+  db.ref("baegotDraft").update(up);
 }
 const togglePriorityConfirm = v => db.ref("baegotDraft/priorityConfirmed").set(v);
 
@@ -578,24 +657,24 @@ function gradePrio(t, rules, policy){
   const h = (t.headHope || "").trim(), f = (t.transferF || "").trim(), gp = t.gradePriorities || [];
   const gR = (rules && rules.gradeRules) || DEFAULT_RULES.gradeRules;
   // 제13조 11항·제17조 4항: 일반전보내신은 최후순위
+  if (f.includes("만기")) return 95;  // 만기 전보자: 항상 최하위
   if (policy === "LAST" && f.includes("일반내신")) return 90;
   let best = h.includes("부장") ? 10 : 999;
   gp.forEach(c => { const r = gR.find(x => x.code === c); if (r && r.weight < best) best = r.weight; });
   if (best !== 999) return best;
   if (f.includes("일반내신") || f.includes("전보")) return 60;
   if (f.includes("1년휴직") || f.includes("유예")) return 65;
-  if (f.includes("만기")) return 70;
   return 50;
 }
 function dutyPrio(t, rules, policy){
   const h = (t.headHope || "").trim(), f = (t.transferF || "").trim(), g = (t.grade || "").trim(), dp = t.dutyPriorities || [];
   const dR = (rules && rules.dutyRules) || DEFAULT_RULES.dutyRules;
   if (h.includes("부장")) return 5;
+  if (f.includes("만기")) return 95;  // 만기 전보자: 항상 최하위
   if (policy === "LAST" && f.includes("일반내신")) return 80;
   let best = 999;
   dp.forEach(c => { const r = dR.find(x => x.code === c); if (r && r.weight < best) best = r.weight; });
   if (best !== 999) return best;
-  if (f.includes("만기")) return 70;
   if (f.includes("일반내신") || f.includes("전보") || f.includes("타시도")) return 60;
   if (f.includes("1년휴직") || f.includes("유예")) return 55;
   if (f.includes("복직")) return 50;
@@ -629,10 +708,12 @@ function startStage1(){
   if (!state.priorityConfirmed) return alert("⚠️ 먼저 '배정우대 최종 확인'을 체크해 주세요.");
   let s = sortTeachers([...state.teachers], "GRADE").map(t => {
     const h = (t.headHope || "").trim();
+    if (t.transferF === "만기") return {...t, grade:"해당없음(만기)", duty:"해당없음(만기)"};  // 만기 전보자: 학년·업무 모두 제외
     if (!h.includes("부장")) return t;
     const m = h.match(/([1-6])학년/);
     return {...t, grade: m ? m[1] + "학년" : (t.grade || ""), duty: "해당없음"};
   });
+  backupNow("1단계 시작 전"); log("1단계 시작");
   db.ref("baegotDraft").update({stage:1, teachers:s, currentTurn:nextTurn(s, 1, 0)});
   alert("✅ 1단계 학년 선택이 시작되었습니다.");
 }
@@ -641,7 +722,8 @@ function startStage2(){
   if (!state.priorityConfirmed) return alert("⚠️ 배정우대 확인 체크가 해제되어 있습니다.");
   const noGrade = state.teachers.filter(t => !t.grade).map(t => t.name);
   if (noGrade.length && !confirm(`아직 학년을 고르지 않은 교사가 있습니다 (${noGrade.join(", ")}).\n학년이 없으면 업무를 선택할 수 없습니다. 그래도 시작할까요?`)) return;
-  let s = sortTeachers([...state.teachers], "DUTY").map(t => (t.headHope || "").includes("부장") ? {...t, duty:"해당없음"} : t);
+  let s = sortTeachers([...state.teachers], "DUTY").map(t => (t.headHope || "").includes("부장") ? {...t, duty:"해당없음"} : (t.transferF === "만기" ? {...t, duty:"해당없음(만기)"} : t));
+  backupNow("2단계 시작 전"); log("2단계 시작");
   db.ref("baegotDraft").update({stage:2, teachers:s, currentTurn:nextTurn(s, 2, 0)});
   alert("✅ 2단계 업무 선택이 시작되었습니다. (제28조 7항 순서)");
 }
@@ -652,10 +734,12 @@ function undoLastTurn(){
   if (state.stage === 1) u[`baegotDraft/teachers/${p}/grade`] = "";
   if (state.stage === 2) u[`baegotDraft/teachers/${p}/duty`] = "";
   u["baegotDraft/currentTurn"] = p;
+  log(`[관리자] 직전 선택 취소: ${state.teachers[p].name}`);
   db.ref().update(u);
 }
 function clearAllData(){
   if (!confirm("모든 명단을 초기화할까요? (정원·업무·우대규칙 설정은 유지됩니다)")) return;
+  backupNow("명단 초기화 전"); log("명단 초기화");
   db.ref("baegotDraft").update({stage:0, currentTurn:0, priorityConfirmed:false, teachers:[]});
 }
 function loadSampleData(){
@@ -676,21 +760,45 @@ function loadSampleData(){
   });
 }
 
-/* ---------- 선택 처리 ---------- */
+/* ---------- 선택 처리 (확인창 → 확정) ---------- */
+function askConfirm(html){
+  return new Promise(res => {
+    const m = document.getElementById("modal"), yes = document.getElementById("m-yes"), no = document.getElementById("m-no");
+    document.getElementById("m-body").innerHTML = html;
+    m.classList.add("on");
+    const done = v => { m.classList.remove("on"); yes.onclick = no.onclick = null; res(v); };
+    yes.onclick = () => done(true); no.onclick = () => done(false);
+  });
+}
+const note = "<small>'예, 확정'을 누르면 다음 선생님 차례로 넘어가며, 이후 변경은 관리자에게 요청해야 합니다.</small>";
 function chooseGrade(g){
-  if (!confirm(`[${g}]을(를) 최종 선택할까요?`)) return;
-  const i = state.currentTurn, t = [...state.teachers];
-  t[i].grade = g;
-  db.ref("baegotDraft").update({teachers:t, currentTurn:nextTurn(t, 1, i + 1)});
+  const idx = state.currentTurn, t0 = state.teachers[idx]; if (!t0) return;
+  const nm = t0.name;
+  askConfirm(`<b>${esc(nm)}</b> 선생님!<br><span class="pick">${esc(g)}</span><br>을(를) 선택하셨습니다. 확실한가요?${note}`).then(ok => {
+    if (!ok) return;
+    const t = [...state.teachers];
+    if (state.currentTurn !== idx || !t[idx] || t[idx].name !== nm || t[idx].grade) return alert("그 사이 순서가 바뀌었습니다. 화면을 확인해 주세요.");
+    const lim = (state.gradeLimits || DEFAULT_GRADE_LIMITS)[g];
+    if (t.filter(x => x.grade === g).length >= lim) return alert("그 사이 정원이 마감되었습니다. 다시 선택해 주세요.");
+    t[idx] = {...t[idx], grade:g};
+    log(`${nm} → 학년 ${g}`);
+    db.ref("baegotDraft").update({teachers:t, currentTurn:nextTurn(t, 1, idx + 1)});
+  });
 }
 function chooseDuty(name){
-  const i = state.currentTurn, t = [...state.teachers];
-  const d = getDuties().find(x => x.name === name);
-  if (!d || !d.grades.includes(groupOf(t[i].grade))) return alert("이 업무는 선생님이 선택한 학년에서는 고를 수 없습니다.");
-  if (t.some(x => x.duty === name)) return alert("이미 다른 선생님이 선택한 업무입니다.");
-  if (!confirm(`[${name}] 업무를 최종 선택할까요?`)) return;
-  t[i].duty = name;
-  db.ref("baegotDraft").update({teachers:t, currentTurn:nextTurn(t, 2, i + 1)});
+  const idx = state.currentTurn, t0 = state.teachers[idx]; if (!t0) return;
+  const nm = t0.name;
+  const d0 = getDuties().find(x => x.name === name);
+  if (!d0 || !d0.grades.includes(groupOf(t0.grade))) return alert("이 업무는 선택한 학년에서는 고를 수 없습니다.");
+  askConfirm(`<b>${esc(nm)}</b> 선생님!<br><span class="pick">${esc(name)}</span><br>업무를 선택하셨습니다. 확실한가요?${note}`).then(ok => {
+    if (!ok) return;
+    const t = [...state.teachers];
+    if (state.currentTurn !== idx || !t[idx] || t[idx].name !== nm || t[idx].duty) return alert("그 사이 순서가 바뀌었습니다. 화면을 확인해 주세요.");
+    if (t.some(x => x.duty === name)) return alert("그 사이 다른 선생님이 선택한 업무입니다. 다시 선택해 주세요.");
+    t[idx] = {...t[idx], duty:name};
+    log(`${nm} → 업무 ${name}`);
+    db.ref("baegotDraft").update({teachers:t, currentTurn:nextTurn(t, 2, idx + 1)});
+  });
 }
 
 /* ---------- 화면 ---------- */
@@ -758,25 +866,109 @@ function render(){
     db2.appendChild(b);
   });
 
-  // 현황표
+  // 현황 (순위표 / 모바일 카드 / 학년별 / 업무별)
+  const stg = state.stage;
+  const doneN = teachers.filter(t => stg === 1 ? t.grade : t.duty).length;
+  document.getElementById("prog").textContent = stg > 0 ? `진행 ${doneN}/${teachers.length}` : `${teachers.length}명`;
   const tb = document.getElementById("roster-body"); tb.innerHTML = "";
+  let mc = "";
   teachers.forEach((t, i) => {
-    const cur = state.stage > 0 && i === state.currentTurn;
-    const done = (state.stage === 1 && t.grade) || (state.stage === 2 && t.duty);
-    const tr = document.createElement("tr");
-    tr.className = ((cur ? "active-row" : done ? "done-row" : "") + (myName && t.name === myName ? " me-row" : "")).trim();
+    const cur = stg > 0 && i === state.currentTurn;
+    const done = (stg === 1 && t.grade) || (stg === 2 && t.duty);
+    const cls = ((cur ? "active-row" : done ? "done-row" : "") + (myName && t.name === myName ? " me-row" : "")).trim();
+    const stt = stg === 0 ? "등록" : cur ? "⚡차례" : done ? "✅완료" : "대기";
     const gb2 = (t.gradePriorities || []).map(c => `<span class="bg">${esc(c)}</span>`).join("") || "-";
     const db3 = (t.dutyPriorities || []).map(c => `<span class="bg bd">${esc(c)}</span>`).join("") || "-";
-    const cells = [
-      ["순위", `<b>${t.rank}</b>`], ["성명", `<b>${esc(t.name)}</b>`], ["점수", t.score], ["본교", t.schoolCar], ["총경력", t.totalCar],
-      ["내신/휴직", esc(t.transferF || "X")], ["학년우대", gb2], ["업무우대", db3], ["부장", esc(t.headHope || "X")],
-      ["학년", `<span style="color:#1e3fae;font-weight:700">${esc(t.grade || "-")}</span>`],
-      ["업무", `<span style="color:#5a2fd0;font-weight:700">${esc(t.duty || "-")}</span>`],
-      ["상태", state.stage === 0 ? "등록완료" : cur ? "⚡선택중" : done ? "✅완료" : "대기"]
-    ];
-    tr.innerHTML = cells.map(c => `<td data-l="${c[0]}">${c[1]}</td>`).join("");
+    const tr = document.createElement("tr"); tr.className = cls;
+    tr.innerHTML = `<td><b>${t.rank}</b></td><td><b>${esc(t.name)}</b></td><td>${t.score}</td><td>${t.schoolCar}</td><td>${t.totalCar}</td><td>${esc(t.transferF || "X")}</td><td>${gb2}</td><td>${db3}</td><td>${esc(t.headHope || "X")}</td>` +
+      `<td style="color:#1e3fae;font-weight:700">${esc(t.grade || "-")}</td><td style="color:#5a2fd0;font-weight:700">${esc(t.duty || "-")}</td><td>${stt}</td>`;
     tb.appendChild(tr);
+    const tags = [t.transferF && t.transferF !== "X" ? t.transferF : "", t.headHope && t.headHope !== "X" ? t.headHope : "", ...(t.gradePriorities || []), ...(t.dutyPriorities || [])]
+      .filter(Boolean).map(x => `<span class="tg">${esc(x)}</span>`).join("");
+    mc += `<div class="mc ${cls}"><div class="mr">${t.rank}</div><div class="mb"><div class="mn"><b>${esc(t.name)}</b>${tags}<span class="ms">${stt}</span></div>` +
+      `<div class="mm">${t.score}점 · 본교 ${t.schoolCar} · 총 ${t.totalCar}</div>` +
+      `<div class="ma"><span class="${t.grade ? "c1" : "c0"}">${esc(t.grade || "학년 -")}</span><span class="${t.duty ? "c2" : "c0"}">${esc(t.duty || "업무 -")}</span></div></div></div>`;
   });
+  document.getElementById("roster-m").innerHTML = mc;
+
+  let gv = "";
+  Object.entries(state.gradeLimits || DEFAULT_GRADE_LIMITS).forEach(([n, l]) => {
+    const m = teachers.filter(t => t.grade === n);
+    gv += `<div class="gc"><div class="gh"><b>${esc(n)}</b><span class="${m.length >= l ? "fill" : "open"}"><b>${m.length}/${l}</b></span></div><div class="gn">${m.map(t => `<span class="nm">${esc(t.name)}</span>`).join("") || '<span class="empty">비어 있음</span>'}</div></div>`;
+  });
+  document.getElementById("v-grade").innerHTML = gv;
+  let dv = "";
+  duties.forEach(d => {
+    const t = teachers.find(x => x.duty === d.name);
+    dv += `<div class="dr ${t ? "tk" : ""}"><span class="dn">${esc(d.name)}<small>${esc(gradeLabel(d.grades))}</small></span><span class="dw">${t ? esc(t.name) : "-"}</span></div>`;
+  });
+  document.getElementById("v-duty").innerHTML = dv;
+}
+
+/* ---------- 탭 / 기록 / 백업 / 사후 수정 ---------- */
+function setView(v){
+  ["rank","grade","duty"].forEach(k => document.getElementById("v-" + k).classList.toggle("hide", k !== v));
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.v === v));
+}
+const log = m => db.ref("baegotLog").push({t:Date.now(), m});
+const fmt = t => new Date(t).toLocaleString("ko-KR", {month:"numeric", day:"numeric", hour:"2-digit", minute:"2-digit", second:"2-digit"});
+db.ref("baegotLog").limitToLast(40).on("value", sn => {
+  const a = []; sn.forEach(c => { a.unshift(c.val()); });
+  document.getElementById("log-list").innerHTML = a.map(x => `<div>${fmt(x.t)} · ${esc(x.m)}</div>`).join("") || "기록 없음";
+});
+function backupNow(label){ return state ? db.ref("baegotBackups").push({t:Date.now(), label, data:state}) : Promise.resolve(); }
+db.ref("baegotBackups").limitToLast(12).on("value", sn => {
+  const a = []; sn.forEach(c => { a.unshift({k:c.key, ...c.val()}); });
+  document.getElementById("backup-list").innerHTML = a.map(x => `<div class="tag"><span>${fmt(x.t)} ${esc(x.label)}</span><button data-k="${x.k}" onclick="restoreBackup(this.dataset.k)">복원</button></div>`).join("") || "백업 없음";
+});
+function restoreBackup(k){
+  if (!confirm("이 백업 시점으로 전체 데이터를 되돌릴까요?\n(되돌리기 직전 상태는 자동 백업됩니다)")) return;
+  backupNow("복원 직전 자동").then(() => db.ref("baegotBackups/" + k).once("value")).then(sn => {
+    const v = sn.val(); if (!v) return alert("백업을 찾을 수 없습니다.");
+    log(`[관리자] 백업 복원: ${fmt(v.t)} ${v.label}`);
+    return db.ref("baegotDraft").set(v.data);
+  });
+}
+function downloadJSON(){
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(state, null, 1)], {type:"application/json"}));
+  a.download = "솔로몬_백업_" + Date.now() + ".json"; a.click();
+}
+function resortNow(){
+  if (!state || !state.teachers) return;
+  if (!confirm("현재 단계 기준으로 순위를 다시 계산합니다. 진행 중이면 차례가 가장 앞의 미선택자로 이동합니다. 계속할까요?")) return;
+  backupNow("재정렬 전");
+  const mode = state.stage === 2 ? "DUTY" : "GRADE", sl = sortTeachers([...state.teachers], mode), up = {teachers: sl};
+  if (state.stage > 0) up.currentTurn = nextTurn(sl, state.stage, 0);
+  log("[관리자] 순위 재정렬"); db.ref("baegotDraft").update(up);
+}
+function renderFix(){
+  const b = document.getElementById("fix-body");
+  if (!b || !state || document.getElementById("admin").style.display !== "block") return;
+  const gl = Object.keys(state.gradeLimits || DEFAULT_GRADE_LIMITS), dl = [...getDuties().map(d => d.name), "해당없음", "해당없음(만기)"];
+  const opts = (list, cur) => { const l = [...list]; if (cur && !l.includes(cur)) l.push(cur); return `<option value="">(비움)</option>` + l.map(x => `<option value="${esc(x)}" ${x === cur ? "selected" : ""}>${esc(x)}</option>`).join(""); };
+  b.innerHTML = (state.teachers || []).map((t, i) =>
+    `<tr><td>${t.rank}</td><td><b>${esc(t.name)}</b></td>` +
+    `<td><select class="inp" style="padding:6px;max-width:140px" onchange="fixAssign(${i},'grade',this.value)">${opts(gl, t.grade)}</select></td>` +
+    `<td><select class="inp" style="padding:6px;max-width:170px" onchange="fixAssign(${i},'duty',this.value)">${opts(dl, t.duty)}</select></td>` +
+    `<td><button class="btn sm ghost" onclick="setTurn(${i})">차례 지정</button></td></tr>`).join("");
+}
+function fixAssign(i, f, v){
+  const t = [...state.teachers], nm = t[i].name, lb = f === "grade" ? "학년" : "업무";
+  if (f === "duty" && v && !v.startsWith("해당없음") && t.some((x, k) => k !== i && x.duty === v)) { alert("이미 다른 선생님이 가진 업무입니다. 먼저 그 선생님의 업무를 비워 주세요."); return renderFix(); }
+  if (f === "grade" && v && t.filter((x, k) => k !== i && x.grade === v).length >= (state.gradeLimits || DEFAULT_GRADE_LIMITS)[v] && !confirm(`[${v}] 정원이 찼습니다. 그래도 배정할까요?`)) return renderFix();
+  if (!confirm(`${nm} 선생님의 ${lb}를 [${v || "비움"}](으)로 변경할까요?`)) return renderFix();
+  backupNow("관리자 수정 전");
+  t[i] = {...t[i], [f]: v};
+  log(`[관리자] ${nm} ${lb} → ${v || "비움"}`);
+  db.ref("baegotDraft/teachers").set(t);
+}
+function setTurn(i){
+  if (!state || state.stage === 0) return alert("1·2단계 진행 중에만 사용할 수 있습니다.");
+  const t = state.teachers[i];
+  if (!confirm(`${t.name} 선생님에게 선택 차례를 줄까요?\n(이미 선택한 값이 있으면 먼저 [비움]으로 바꿔 주세요)`)) return;
+  log(`[관리자] 차례 지정: ${t.name}`);
+  db.ref("baegotDraft/currentTurn").set(i);
 }
 
 function exportCSV(){
