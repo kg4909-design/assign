@@ -335,7 +335,8 @@ input[type=file]{max-width:100%;min-width:0;font-size:.8rem}
       <button class="btn sm" onclick="changeAdminPw()">변경</button>
     </div>
     <strong style="font-size:.85rem;display:block;margin-top:14px">② 접근 · 공개 범위</strong>
-    <label class="chk"><input type="checkbox" id="sc-pin"> 본인 확인 PIN 사용 (다른 사람 이름으로 선택하는 것을 막음)</label>
+    <label class="chk" style="margin-top:6px"><input type="checkbox" id="sc-self"> 교사가 자기 점수·경력을 직접 입력·수정 (0단계에서만, 끄면 인사담당자만 입력)</label>
+    <label class="chk"><input type="checkbox" id="sc-pin"> 본인 확인 PIN 사용 (선택사항 · 실수로 다른 사람 이름을 고르는 것을 막는 용도이며 강력한 보안은 아닙니다)</label>
     <div class="row"><span style="font-size:.85rem">점수·경력 공개 범위</span>
       <select id="sc-vis" class="inp"><option value="all">모든 교원에게 공개 (기존 시트 방식)</option><option value="self">본인 것만 보임 (순위·이름·배정은 공개)</option></select></div>
     <div class="btns">
@@ -495,6 +496,7 @@ input[type=file]{max-width:100%;min-width:0;font-size:.8rem}
   </div>
   <div class="guide">💡 <strong>점수 입력 안내</strong><br><span id="in-guide"></span></div>
   <div class="guide" style="background:#fff8e6;border-color:#f0d58a;color:#6b5a2a"><span id="in-notice"></span>
+    <div id="in-consent-wrap" style="margin-top:8px"><label class="chk"><input type="checkbox" id="in-consent"> 위 개인정보 수집·이용 안내를 확인했고 동의합니다</label></div>
   </div>
 </div>
 
@@ -582,7 +584,7 @@ const GENERIC_CFG = {
   headOptions:["1학년부장","2학년부장","3학년부장","4학년부장","5학년부장","6학년부장","교무부장","연구부장"],
   leaveOptions:[{v:2,label:"교과전담 희망 (2점)"},{v:3,label:"2~4학년 (3점)"},{v:4,label:"1·5학년 (4점)"},{v:5,label:"6학년·임의배정 (5점)"}],
   scoreGuide:"학교 규정에 따라 점수·경력을 입력하세요. 순위 계산 방식은 인사담당자가 규정 마법사에서 정합니다.",
-  access:{selfInput:false, requirePin:false, scoreVisibility:"all"},
+  access:{selfInput:true, requirePin:false, scoreVisibility:"all"},
   privacyNotice:DEFAULT_NOTICE, retentionDays:30
 };
 
@@ -691,9 +693,9 @@ setTimeout(dismissIntro, 4350);
 function dismissIntro(){ const e = $("intro"); if (e) e.classList.add("fade"); }
 
 /* ---------- 학교 데이터 연결 ---------- */
-let OFFS = [], LOADED = {};
+let OFFS = [], LOADED = {}, INBOX = {};
 function listen(ref, cb){ ref.on("value", cb); OFFS.push(() => ref.off("value", cb)); }
-function detachAll(){ OFFS.forEach(f => { try { f(); } catch(e){} }); OFFS = []; LOADED = {}; state = null; CONFIG = null; CFGC = null; initing = false; }
+function detachAll(){ OFFS.forEach(f => { try { f(); } catch(e){} }); OFFS = []; LOADED = {}; INBOX = {}; state = null; CONFIG = null; CFGC = null; initing = false; }
 function maybeRender(){ if (LOADED.draft && LOADED.config && state) { render(); renderAdmin(); } }
 function attachSchool(){
   listen(R("config"), s => { setConfig(s.val()); LOADED.config = true; fillInputControls(); maybeRender(); });
@@ -713,6 +715,7 @@ function attachSchool(){
     }
     maybeRender();
   });
+  listen(R("inbox"), s => { INBOX = s.val() || {}; if (isAdmin) mergeInbox(); });
   attachLogs();
 }
 
@@ -731,7 +734,9 @@ async function selectUser(v){
     verified.add(v);
   }
   myName = v;
-  const me = state && state.teachers && state.teachers.find(t => t.name === myName);
+  let me = state && state.teachers && state.teachers.find(t => t.name === myName);
+  const pend = Object.values(INBOX || {}).find(e => e && e.name === myName);
+  if (pend && (!me || (me.inTs || 0) < pend.ts)) me = {name:pend.name, scoreRaw:pend.scoreRaw, schoolCar:pend.schoolCar, totalCar:pend.totalCar, transferF:pend.transferF, headHope:pend.headHope, leaveYear:pend.leaveYear};
   if (me) {
     $("in-name").value = me.name;
     $("in-score").value = me.scoreRaw != null ? me.scoreRaw : me.score;
@@ -809,6 +814,7 @@ async function toggleAdmin(){
     }
   }
   p.style.display = "block";
+  mergeInbox();
   openAdminUI();
   render();
 }
@@ -1053,28 +1059,79 @@ function buildEntry(i, prev){
   if (isHead({headHope:i.headHope})) { const m = i.headHope.match(/(\d+)학년/); if (m) e.grade = m[1] + "학년"; e.duty = "해당없음"; }
   return e;
 }
+const numIn = (id, lo, hi) => { const v = parseFloat($(id).value); return isNaN(v) ? 0 : v; };
+const inRange = (v, lo, hi) => v >= lo && v <= hi;
+const entryKey = async name => (await sha256hex(SID + "|" + name)).slice(0, 24);
+function diffText(prev, cur){
+  if (!prev) return "신규 등록";
+  const f = [["점수", prev.scoreRaw != null ? prev.scoreRaw : prev.score, cur.scoreRaw], ["본교", prev.schoolCar, cur.schoolCar], ["총경력", prev.totalCar, cur.totalCar], ["구분", prev.transferF, cur.transferF], ["부장", prev.headHope, cur.headHope]];
+  const d = f.filter(x => String(x[1]) !== String(x[2])).map(x => `${x[0]} ${x[1]}→${x[2]}`);
+  return d.length ? d.join(", ") : "변경 없음";
+}
 async function submitMyScore(){
-  if (!isAdmin) return alert("점수·경력은 인사담당자(교감)만 입력·수정할 수 있습니다.");
   const name = $("in-name").value.trim();
   if (!name) return alert("성함을 입력해 주세요.");
+  if (name.length > 30) return alert("성함이 너무 깁니다.");
+  const a = cfg().access, stage = state && state.stage ? state.stage : 0;
+  if (!isAdmin) {
+    if (!a.selfInput) return alert("지금은 선생님이 직접 입력할 수 없습니다. 인사담당자(교감)께 문의하세요.");
+    if (stage !== 0) return alert("점수·경력 입력은 0단계(입력 기간)에만 할 수 있습니다. 수정이 필요하면 교감선생님께 요청하세요.");
+    if (!$("in-consent").checked) return alert("개인정보 수집·이용 안내를 확인하고 동의에 체크해 주세요.");
+  }
   const list = (state && state.teachers) ? [...state.teachers] : [];
   const k = list.findIndex(t => t.name === name);
-  const rawScore = parseFloat($("in-score").value) || 0;
-  const schoolCar = parseFloat($("in-school").value) || 0;
-  const totalCar = parseFloat($("in-total").value) || 0;
-  const transferF = $("in-transfer").value;
-  const S = statusByValue(transferF);
+  if (!isAdmin && a.requirePin) {
+    if (k < 0) return alert("명단에 없는 이름입니다. 인사담당자에게 문의하세요.");
+    if (!verified.has(name)) return alert("본인 확인(PIN)을 먼저 해 주세요. 위에서 본인 이름을 선택하면 PIN을 묻습니다.");
+  }
+  const rawScore = numIn("in-score"), schoolCar = numIn("in-school"), totalCar = numIn("in-total");
+  if (!inRange(rawScore, -50, 200) || !inRange(schoolCar, 0, 60) || !inRange(totalCar, 0, 60)) return alert("점수 또는 경력 숫자가 허용 범위를 벗어났습니다. 다시 확인해 주세요.");
+  const transferF = $("in-transfer").value, S = statusByValue(transferF);
   let leaveYear = 0;
   if (S && S.halveCurrent) {
     leaveYear = parseFloat($("in-leave").value) || 0;
     if (!leaveYear) return alert("이 구분은 '당해 학년점수'를 선택해야 합니다.");
   }
-  const entry = clone(buildEntry({name, rawScore, schoolCar, totalCar, transferF, headHope:$("in-head").value, leaveYear}, k >= 0 ? list[k] : null));
-  if (k >= 0) list[k] = entry; else list.push(entry);
+  const headHope = $("in-head").value;
   myName = name;
-  await R("draft").update({stage: state && state.stage ? state.stage : 0, teachers: clone(sortTeachers(list, state && state.stage === 2 ? "DUTY" : "GRADE"))});
-  log(`${isAdmin ? "[관리자] " : ""}${name} 정보 ${k >= 0 ? "수정" : "등록"}`);
-  alert(`✅ [${name}] 선생님 정보가 저장되었습니다.`);
+  if (isAdmin) {
+    const entry = clone(buildEntry({name, rawScore, schoolCar, totalCar, transferF, headHope, leaveYear}, k >= 0 ? list[k] : null));
+    if (k >= 0) list[k] = entry; else list.push(entry);
+    await R("draft").update({stage, teachers: clone(sortTeachers(list, stage === 2 ? "DUTY" : "GRADE"))});
+    log(`[관리자] ${name} 정보 ${k >= 0 ? "수정" : "등록"}`);
+    return alert(`✅ [${name}] 선생님 정보가 저장되었습니다.`);
+  }
+  // 교사 입력: 우편함(inbox)에만 쓸 수 있고, 교감 화면이 열려 있으면 곧 명단에 반영됩니다.
+  const key = await entryKey(name), cur = {name, scoreRaw:rawScore, schoolCar, totalCar, transferF, headHope, leaveYear, ts:Date.now()};
+  const prev = (INBOX && INBOX[key]) || (k >= 0 ? list[k] : null);
+  try { await R("inbox/" + key).set(cur); }
+  catch(e) { return alert("저장하지 못했습니다. 입력 기간이 끝났거나 권한이 없습니다. 교감선생님께 문의하세요."); }
+  log(`[교사 입력] ${name}: ${diffText(prev, cur)}`);
+  alert(`✅ [${name}] 선생님 정보가 제출되었습니다.\n교감선생님이 확인하면 명단에 반영됩니다. (0단계 동안은 같은 이름으로 다시 제출해 수정할 수 있어요)`);
+}
+
+// 교사가 낸 입력을 명단으로 합치기 (교감 화면에서만 동작)
+let merging = false;
+async function mergeInbox(){
+  if (!isAdmin || merging || !state || (state.stage || 0) !== 0) return 0;
+  const ib = INBOX || {}, keys = Object.keys(ib); if (!keys.length) return 0;
+  merging = true;
+  try {
+    const list = [...(state.teachers || [])], notes = [];
+    keys.forEach(k => {
+      const e = ib[k]; if (!e || !e.name) return;
+      const j = list.findIndex(t => t.name === e.name), prev = j >= 0 ? list[j] : null;
+      if (prev && (prev.inTs || 0) >= e.ts) return;
+      const t = buildEntry({name:e.name, rawScore:e.scoreRaw, schoolCar:e.schoolCar, totalCar:e.totalCar, transferF:e.transferF, headHope:e.headHope, leaveYear:e.leaveYear || 0}, prev);
+      t.inTs = e.ts;
+      if (j >= 0) list[j] = clone(t); else list.push(clone(t));
+      notes.push(e.name);
+    });
+    if (!notes.length) return 0;
+    await R("draft").update({teachers: clone(sortTeachers(list, "GRADE"))});
+    log(`[입력 반영] 교사 입력 ${notes.length}건을 명단에 반영: ${notes.join(", ")}`);
+    return notes.length;
+  } catch(e) { return 0; } finally { merging = false; }
 }
 
 /* ---------- 단계 제어 ---------- */
@@ -1089,7 +1146,8 @@ function applyExclusion(t, which){
   if ((which === "duty" || which === "both") && S.excludeDuty) r.duty = lbl;
   return r;
 }
-function startStage1(){
+async function startStage1(){
+  await mergeInbox();
   if (!state || !state.teachers || !state.teachers.length) return alert("등록된 교원이 없습니다.");
   if (!state.priorityConfirmed) return alert("⚠️ 먼저 '배정우대 최종 확인'을 체크해 주세요.");
   let s = sortTeachers([...state.teachers], "GRADE").map(t => {
@@ -1217,11 +1275,11 @@ function loadSampleData(){
 }
 
 /* ---------- 선택 처리 (확인창 → 확정) ---------- */
-const note = "<small>'예, 확정'을 누르면 다음 선생님 차례로 넘어가며, 이후 변경은 관리자에게 요청해야 합니다.</small>";
+const note = "";
 function chooseGrade(g){
   const idx = state.currentTurn, t0 = state.teachers[idx]; if (!t0) return;
   const nm = t0.name;
-  askConfirm(`<b>${esc(nm)}</b> 선생님!<br><span class="pick">${esc(g)}</span><br>을(를) 선택하셨습니다. 확실한가요?${note}`).then(ok => {
+  askConfirm(`⚠️ <b style="color:#c62828">경고</b><br><b>${esc(nm)}</b> 선생님!<br><span class="pick">${esc(g)}</span><br>을(를) 선택하시면 <b style="color:#c62828">바꾸실 수 없습니다.</b><br>선택하시겠습니까?${note}`).then(ok => {
     if (!ok) return;
     const t = [...state.teachers];
     if (state.currentTurn !== idx || !t[idx] || t[idx].name !== nm || t[idx].grade) return alert("그 사이 순서가 바뀌었습니다. 화면을 확인해 주세요.");
@@ -1239,7 +1297,7 @@ function chooseDuty(name){
   if (!d0 || !d0.grades.includes(groupOf(t0.grade))) return alert("이 업무는 선택한 학년에서는 고를 수 없습니다.");
   const fz = forcedDuties(state.teachers, idx);
   if (fz.length && !fz.includes(name)) return alert(`선생님은 ${fz.join(", ")} 업무를 맡아야 합니다. (대상 학년에서 남은 마지막 선생님입니다)`);
-  askConfirm(`<b>${esc(nm)}</b> 선생님!<br><span class="pick">${esc(name)}</span><br>업무를 선택하셨습니다. 확실한가요?${note}`).then(ok => {
+  askConfirm(`⚠️ <b style="color:#c62828">경고</b><br><b>${esc(nm)}</b> 선생님!<br><span class="pick">${esc(name)}</span><br>업무를 선택하시면 <b style="color:#c62828">바꾸실 수 없습니다.</b><br>선택하시겠습니까?${note}`).then(ok => {
     if (!ok) return;
     const t = [...state.teachers];
     if (state.currentTurn !== idx || !t[idx] || t[idx].name !== nm || t[idx].duty) return alert("그 사이 순서가 바뀌었습니다. 화면을 확인해 주세요.");
@@ -1254,7 +1312,8 @@ function chooseDuty(name){
 function render(){
   if (!state) return;
   const teachers = state.teachers || [];
-  $("input-sec").style.display = isAdmin ? "block" : "none";
+  $("input-sec").style.display = (state.stage === 0 && (isAdmin || cfg().access.selfInput)) || (isAdmin && state.stage > 0) ? "block" : "none";
+  $("in-consent-wrap").style.display = isAdmin ? "none" : "block";
 
   const sel = document.getElementById("user-select"), prev = myName || sel.value;
   sel.innerHTML = `<option value="">-- 본인 성함 선택 --</option>`;
@@ -1566,18 +1625,17 @@ function showLanding(code){ $("landing").classList.remove("hide"); if (code) $("
 
 /* ---------- 제작자 콘솔 (학교 만들기·비밀번호 발급) ---------- */
 let PLAT = null, CREG = null, CPW = "", SECAPP = null;
+const CREATOR_EMAIL = "creator@solomon.invalid";
 const validEmail = s => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 async function openCreator(){
   if (!(window.crypto && crypto.subtle)) return alert("이 브라우저에서는 암호 기능을 쓸 수 없습니다. https 주소(또는 최신 크롬)에서 열어 주세요.");
   if (!(await ensureAnon())) return alert("보안 로그인을 시작하지 못했습니다. Firebase 콘솔에서 '익명' 로그인을 켰는지 확인하세요.");
   let first = false;
   try { first = !(await db.ref("platform/initialized").once("value")).exists(); } catch(e) { return alert("서버에 연결하지 못했습니다. Firebase 규칙·인터넷 연결을 확인하세요."); }
-  const email = ((await askPrompt(first ? "🔧 제작자 계정을 처음 만듭니다.<br>사용할 <b>이메일</b>을 입력하세요" : "🔧 제작자 이메일", {ph:"you@example.com", yes:"다음"})) || "").trim();
-  if (!email) return;
-  if (!validEmail(email)) return alert("이메일 형식이 올바르지 않습니다.");
+  const email = CREATOR_EMAIL;
   try {
     if (first) {
-      const p1 = await askPrompt("제작자 비밀번호 (12자 이상 권장, 최소 8자)<br><small>잊으면 학교 목록을 복구할 수 없습니다</small>", {password:true}); if (p1 === null) return;
+      const p1 = await askPrompt("🔧 제작자 비밀번호를 처음 정합니다 (12자 이상 권장, 최소 8자)<br><small>잊으면 학교 목록을 복구할 수 없습니다</small>", {password:true}); if (p1 === null) return;
       if (p1.length < 8) return alert("8자 이상으로 만들어 주세요.");
       const p2 = await askPrompt("한 번 더 입력해 주세요.", {password:true}); if (p1 !== p2) return alert("두 번 입력한 비밀번호가 다릅니다.");
       const cred = await auth.createUserWithEmailAndPassword(email, p1);
@@ -1701,6 +1759,10 @@ function buildRules(){
   const creator = A + " && root.child('platform/creators/' + auth.uid).exists()";
   const admin = A + " && (root.child('platform/creators/' + auth.uid).exists() || root.child('schools/' + $sid + '/admins/' + auth.uid).exists())";
   const stage = "root.child('schools/' + $sid + '/draft/stage').val()";
+  const nm = f => "newData.child('" + f + "')";
+  const rng = (f, lo, hi) => nm(f) + ".isNumber() && " + nm(f) + ".val() >= " + lo + " && " + nm(f) + ".val() <= " + hi;
+  const str = (f, mx) => nm(f) + ".isString() && " + nm(f) + ".val().length <= " + mx;
+  const inboxOk = "newData.hasChildren(['name','scoreRaw','schoolCar','totalCar','transferF','headHope','leaveYear','ts']) && " + [str("name", 30), rng("scoreRaw", -50, 200), rng("schoolCar", 0, 60), rng("totalCar", 0, 60), rng("leaveYear", 0, 10), str("transferF", 40), str("headHope", 40), nm("ts") + ".isNumber()"].join(" && ") + " && " + nm("name") + ".val().length > 0";
   const emptyCell = "(!data.exists() || data.val() === '') && newData.isString() && newData.val() !== '' && newData.val().length <= 60";
   return JSON.stringify({rules:{
     ".read":false, ".write":false,
@@ -1716,6 +1778,7 @@ function buildRules(){
         ".write":creator,
         meta:{".write":admin}, config:{".write":admin}, backups:{".write":admin},
         log:{".write":admin, "$id":{".write":A + " && !data.exists() && newData.exists()"}},
+        inbox:{".write":admin, "$k":Object.assign({".write":A + " && " + stage + " === 0 && root.child('schools/' + $sid + '/config/access/selfInput').val() === true && newData.exists() && " + inboxOk, "$other":{".validate":false}}, Object.fromEntries(["name","scoreRaw","schoolCar","totalCar","transferF","headHope","leaveYear","ts"].map(f => [f, {".validate":true}])))},
         draft:{
           ".write":admin,
           currentTurn:{".write":A + " && newData.isNumber() && newData.val() >= data.val() && " + stage + " > 0"},
@@ -2066,14 +2129,14 @@ async function applyWiz(){
 function fillSecurity(){
   const c = cfg(), a = c.access;
   $("sc-code").textContent = SID; $("sc-link").textContent = schoolLink(SID);
-  $("sc-pin").checked = !!a.requirePin; $("sc-vis").value = a.scoreVisibility || "all";
+  $("sc-self").checked = !!a.selfInput; $("sc-pin").checked = !!a.requirePin; $("sc-vis").value = a.scoreVisibility || "all";
   $("sc-notice").value = c.privacyNotice; $("sc-keep").value = c.retentionDays;
   $("sc-oldpw-wrap").classList.toggle("hide", isCreator);
 }
 async function saveAccess(){
   const keep = parseInt($("sc-keep").value);
   if (!(keep >= 0 && keep <= 3650)) return alert("보관 기간은 0~3650일로 입력하세요. (0 = 자동 삭제 안 함)");
-  await R("config").update({access:{selfInput:false, requirePin:$("sc-pin").checked, scoreVisibility:$("sc-vis").value}, privacyNotice:$("sc-notice").value, retentionDays:keep});
+  await R("config").update({access:{selfInput:$("sc-self").checked, requirePin:$("sc-pin").checked, scoreVisibility:$("sc-vis").value}, privacyNotice:$("sc-notice").value, retentionDays:keep});
   log("[관리자] 접근·개인정보 설정 변경");
   alert("저장했습니다.");
 }
