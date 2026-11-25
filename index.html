@@ -1610,7 +1610,6 @@ async function enterSchool(code){
   if (!m) { msg.textContent = "등록되지 않은 학교 코드입니다."; return false; }
   detachAll();
   SID = code; META = m; isAdmin = false; isCreator = false; verified.clear(); myName = "";
-  try { localStorage.setItem("solomonSchool", code); } catch(e) {}
   $("landing").classList.add("hide"); $("creator").classList.add("hide"); $("app").classList.remove("hide");
   $("admin").style.display = "none"; $("school-title").textContent = schoolLabel(m) + " 학년·업무 배정";
   await refreshRole();
@@ -2292,12 +2291,12 @@ function openAdminUI(){
 }
 (async function boot(){
   await startAuth();
-  let code = null;
-  try { code = new URLSearchParams(location.search).get("s"); } catch(e) {}
-  if (!code) { try { code = localStorage.getItem("solomonSchool"); } catch(e) {} }
-  if (code) { const ok = await enterSchool(code); if (!ok) showLanding(code); }
-  else showLanding();
+  try { localStorage.removeItem("solomonSchool"); } catch(e) {}   // 예전 버전이 기억해 둔 학교는 지움
+  let code = "";
+  try { code = new URLSearchParams(location.search).get("s") || ""; } catch(e) {}
+  showLanding(code);   // 항상 첫 화면에서 시작: 링크로 들어오면 코드만 채워 두고 [입장하기]를 누르게 함
 })();
+
 
 /* ---------- 업무분장표 → 업무 목록 자동 만들기 ---------- */
 let DI = {rows:[], col:0, names:[]};
