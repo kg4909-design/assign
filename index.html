@@ -231,11 +231,16 @@ input[type=file]{max-width:100%;min-width:0;font-size:.8rem}
   <div class="card">
     <h3>➕ 새 학교 만들기</h3>
     <div class="row">
-      <input id="cs-name" class="inp" placeholder="학교 이름 (예: 한빛초등학교)" style="flex:1;min-width:200px">
+      <select id="cs-sido" class="inp"><option value="">시·도 선택</option><option>서울</option><option>부산</option><option>대구</option><option>인천</option><option>광주</option><option>대전</option><option>울산</option><option>세종</option><option>경기</option><option>강원</option><option>충북</option><option>충남</option><option>전북</option><option>전남</option><option>경북</option><option>경남</option><option>제주</option></select>
+      <input id="cs-sigungu" class="inp" placeholder="시·군·구 (예: 시흥)" style="width:150px">
+    </div>
+    <div class="row">
+      <input id="cs-name" class="inp" placeholder="학교 이름 (예: 배곧초등학교)" style="flex:1;min-width:200px">
       <select id="cs-tpl" class="inp"><option value="blank">빈 학교 (규정 마법사로 설정)</option><option value="baegot">배곧초 규정 템플릿 (2025.12.01.)</option></select>
       <input id="cs-pw" class="inp" placeholder="인사담당자 비밀번호 (비우면 자동 생성)" style="min-width:230px">
     </div>
     <div class="btns"><button class="btn" onclick="createSchool()">학교 만들기</button></div>
+    <p class="note" style="margin-top:4px">지역을 함께 적어 두면 다른 지역의 같은 이름 학교와 구분됩니다. (예: 경기 시흥 배곧초등학교)</p>
     <div id="cs-result" class="guide hide"></div>
     <p class="note" style="margin-top:10px">① 학교를 만들면 <b>학교 코드와 인사담당자 비밀번호</b>가 나옵니다. ② 교감선생님께 비밀번호를 전달하고, ③ 교사들에게는 입장 링크만 알려 주세요. 교감선생님이 [관리자 → 규정 마법사]에서 우리 학교 규정을 반영합니다.</p>
   </div>
@@ -243,7 +248,7 @@ input[type=file]{max-width:100%;min-width:0;font-size:.8rem}
     <h3>🏫 학교 목록</h3>
     <div id="cs-list"></div>
     <div class="btns">
-      <button class="btn sm ghost" onclick="downloadReg()">⬇️ 학교 목록 백업(JSON)</button>
+      <button class="btn sm ghost" onclick="deleteByCode()">🧹 학교 코드로 직접 삭제 (목록에 없는 학교 정리)</button> <button class="btn sm ghost" onclick="downloadReg()">⬇️ 학교 목록 백업(JSON)</button>
       <button class="btn sm ghost" onclick="changeCreatorPw()">🔑 제작자 비밀번호 변경</button>
     </div>
   </div>
@@ -699,7 +704,7 @@ function detachAll(){ OFFS.forEach(f => { try { f(); } catch(e){} }); OFFS = [];
 function maybeRender(){ if (LOADED.draft && LOADED.config && state) { render(); renderAdmin(); } }
 function attachSchool(){
   listen(R("config"), s => { setConfig(s.val()); LOADED.config = true; fillInputControls(); maybeRender(); });
-  listen(R("meta"), s => { const m = s.val(); if (m) { META = m; $("school-title").textContent = m.name + " 학년·업무 배정"; document.title = "솔로몬 - " + m.name; } });
+  listen(R("meta"), s => { const m = s.val(); if (m) { META = m; $("school-title").textContent = schoolLabel(m) + " 학년·업무 배정"; document.title = "솔로몬 - " + schoolLabel(m); } });
   listen(R("draft"), snap => {
     state = snap.val(); LOADED.draft = true;
     if (!state) {
@@ -1593,6 +1598,7 @@ async function purgeAll(){
 }
 
 /* ---------- 학교 입장 / 나가기 ---------- */
+const schoolLabel = m => [m && m.region && m.region.sido, m && m.region && m.region.sigungu, m && m.name].filter(Boolean).join(" ");
 async function enterSchool(code){
   code = (code || "").trim().toLowerCase();
   const msg = $("land-msg");
@@ -1606,7 +1612,7 @@ async function enterSchool(code){
   SID = code; META = m; isAdmin = false; isCreator = false; verified.clear(); myName = "";
   try { localStorage.setItem("solomonSchool", code); } catch(e) {}
   $("landing").classList.add("hide"); $("creator").classList.add("hide"); $("app").classList.remove("hide");
-  $("admin").style.display = "none"; $("school-title").textContent = m.name + " 학년·업무 배정";
+  $("admin").style.display = "none"; $("school-title").textContent = schoolLabel(m) + " 학년·업무 배정";
   await refreshRole();
   fillInputControls(); attachSchool();
   return true;
@@ -1673,7 +1679,7 @@ async function saveReg(){ const box = await encJSON(CREG, CPW, PLAT.salt); await
 const schoolLink = code => location.origin + location.pathname + "?s=" + code;
 function renderCreator(){
   const L = CREG.schools || [];
-  $("cs-list").innerHTML = L.map(s => `<div class="cs-item"><div><b>${esc(s.name)}</b> <code>${esc(s.code)}</code><br><small>${new Date(s.createdAt).toLocaleDateString("ko-KR")} · ${esc((TEMPLATES[s.template] || {}).label || s.template)}</small></div>` +
+  $("cs-list").innerHTML = L.map(s => `<div class="cs-item"><div><b>${esc(schoolLabel(s))}</b> <code>${esc(s.code)}</code><br><small>${new Date(s.createdAt).toLocaleDateString("ko-KR")} · ${esc((TEMPLATES[s.template] || {}).label || s.template)}</small></div>` +
     `<div class="btns" style="margin:0"><button class="btn sm" onclick="enterAsCreator('${esc(s.code)}')">입장(관리)</button>` +
     `<button class="btn sm ghost" onclick="copyText(schoolLink('${esc(s.code)}'))">링크 복사</button>` +
     `<button class="btn sm ghost" onclick="resetSchoolPw('${esc(s.code)}')">비밀번호 재발급</button>` +
@@ -1695,6 +1701,10 @@ async function makeAdminAccount(pw){
 }
 async function createSchool(){
   const name = $("cs-name").value.trim(); if (!name) return alert("학교 이름을 입력하세요.");
+  const sido = $("cs-sido").value, sigungu = $("cs-sigungu").value.trim();
+  if (!sido || !sigungu) return alert("지역(시·도, 시·군·구)을 입력하세요. 같은 이름의 다른 지역 학교와 구분하는 데 쓰입니다.");
+  const region = {sido, sigungu}, label = schoolLabel({name, region});
+  if ((CREG.schools || []).some(s => schoolLabel(s) === label) && !confirm(`[${label}]은(는) 이미 목록에 있습니다. 그래도 새로 만들까요?`)) return;
   const pw = $("cs-pw").value.trim() || genPw();
   if (pw.length < 6) return alert("비밀번호는 6자 이상으로 해 주세요.");
   const tp = $("cs-tpl").value, T = TEMPLATES[tp] || TEMPLATES.blank;
@@ -1703,23 +1713,23 @@ async function createSchool(){
     while ((await db.ref("schools/" + code + "/meta").once("value")).val()) code = genCode();
     const adm = await makeAdminAccount(pw);
     await db.ref("schools/" + code).set(clone({
-      meta:{name, adminEmail:adm.email, createdAt:Date.now(), template:tp, v:4},
+      meta:{name, region, adminEmail:adm.email, createdAt:Date.now(), template:tp, v:4},
       admins:{[adm.uid]:true},
       config:T.cfg,
       draft:{stage:0, currentTurn:0, priorityConfirmed:false, naesinPolicy:"LAST", gradeLimits:T.gradeLimits, duties:T.duties, priorityRules:T.rules}
     }));
-    CREG.schools.push({code, name, createdAt:Date.now(), template:tp}); await saveReg();
-    $("cs-name").value = ""; $("cs-pw").value = "";
-    showIssued(name, code, pw); renderCreator();
+    CREG.schools.push({code, name, region, createdAt:Date.now(), template:tp}); await saveReg();
+    $("cs-name").value = ""; $("cs-pw").value = ""; $("cs-sigungu").value = "";
+    showIssued(label, code, pw); renderCreator();
   } catch(e) { alert("학교를 만들지 못했습니다: " + (e && e.code === "PERMISSION_DENIED" ? "권한이 없습니다(Firebase 규칙·제작자 로그인 확인)" : authMsg(e))); }
 }
 async function resetSchoolPw(code){
   const s = CREG.schools.find(x => x.code === code); if (!s) return;
-  if (!confirm(`[${s.name}] 인사담당자 비밀번호를 새로 발급할까요?\n기존 비밀번호로는 관리자 권한을 쓸 수 없게 됩니다.`)) return;
+  if (!confirm(`[${schoolLabel(s)}] 인사담당자 비밀번호를 새로 발급할까요?\n기존 비밀번호로는 관리자 권한을 쓸 수 없게 됩니다.`)) return;
   try {
     const pw = genPw(), adm = await makeAdminAccount(pw);
     await db.ref("schools/" + code).update({"meta/adminEmail":adm.email, admins:{[adm.uid]:true}});
-    showIssued(s.name, code, pw);
+    showIssued(schoolLabel(s), code, pw);
   } catch(e) { alert("재발급하지 못했습니다: " + authMsg(e)); }
 }
 async function deleteSchool(code){
@@ -1729,12 +1739,24 @@ async function deleteSchool(code){
   await db.ref("schools/" + code).remove();
   CREG.schools = CREG.schools.filter(x => x.code !== code); await saveReg(); renderCreator();
 }
+async function deleteByCode(){
+  const code = ((await askPrompt("삭제할 <b>학교 코드</b>를 입력하세요<br><small>제작자 목록에 없는 옛 학교를 정리할 때 씁니다</small>", {ph:"예: zthv7n4u"})) || "").trim().toLowerCase();
+  if (!code) return;
+  if (!/^[a-z0-9]{6,24}$/.test(code)) return alert("학교 코드 형식이 올바르지 않습니다.");
+  let m = null; try { m = (await db.ref("schools/" + code + "/meta").once("value")).val(); } catch(e) { return alert("권한이 없습니다."); }
+  if (!m) return alert("그 코드의 학교를 찾을 수 없습니다.");
+  const v = await askPrompt(`⚠️ [${esc(schoolLabel(m))}] (코드 ${esc(code)})의 모든 데이터를 삭제합니다.<br>되돌릴 수 없습니다. 학교 코드를 한 번 더 입력하세요.`, {yes:"삭제 실행"});
+  if (v !== code) return;
+  await db.ref("schools/" + code).remove();
+  CREG.schools = (CREG.schools || []).filter(x => x.code !== code); await saveReg(); renderCreator();
+  alert("삭제했습니다.");
+}
 async function enterAsCreator(code){ const ok = await enterSchool(code); if (!ok) alert("학교에 입장하지 못했습니다."); }
 async function importLegacy(code){
   const s = CREG.schools.find(x => x.code === code); if (!s) return;
   let v; try { v = (await db.ref("baegotDraft").once("value")).val(); } catch(e) { return alert("기존 데이터를 읽을 수 없습니다(권한)."); }
   if (!v) return alert("가져올 기존 배곧초 데이터(baegotDraft)가 없습니다.");
-  if (!confirm(`기존 배곧초 앱의 데이터를 [${s.name}]으로 복사합니다.\n· 교원 명단·진행 상태·학년/업무 설정이 덮어씌워집니다.\n· 규정 설정은 '배곧초 규정 템플릿'으로 바뀝니다.\n계속할까요?`)) return;
+  if (!confirm(`기존 배곧초 앱의 데이터를 [${schoolLabel(s)}]으로 복사합니다.\n· 교원 명단·진행 상태·학년/업무 설정이 덮어씌워집니다.\n· 규정 설정은 '배곧초 규정 템플릿'으로 바뀝니다.\n계속할까요?`)) return;
   await db.ref("schools/" + code).update(clone({draft:v, config:BAEGOT_CFG, "meta/template":"baegot"}));
   alert("가져왔습니다. (기존 baegotDraft 데이터는 그대로 남아 있으니, 확인 후 삭제하세요)");
 }
