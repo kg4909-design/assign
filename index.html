@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>솔로몬 - 배곧초 통합 학년·업무 배정 시스템</title>
+<title>솔로몬 - 학년·업무 배정 시스템</title>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <style>
@@ -159,6 +159,25 @@ th{background:#f4f7ff;font-weight:700;position:sticky;top:0;z-index:1}
   .modal{align-items:flex-end;padding:0}
   .sheet{max-width:none;border-radius:24px 24px 0 0;padding-bottom:calc(22px + env(safe-area-inset-bottom))}
 }
+
+/* v3: 다학교 · 규정 마법사 */
+.land{max-width:520px;margin:6vh auto;padding:0 4px}
+.wiz-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:860px){.wiz-grid{grid-template-columns:1fr}}
+.wiz-box{background:#fff;border:1px solid var(--line);border-radius:var(--r-s);padding:12px}
+.wiz-form h5,.wiz-box h5{margin:16px 0 4px;font-size:.92rem;color:var(--main-d)}
+.ta{width:100%;padding:10px;border:1px solid #cbd5ea;border-radius:var(--r-s);font-size:.85rem;line-height:1.5;margin-top:6px}
+.reg-hits{max-height:240px;overflow:auto;font-size:.8rem;background:#f8faff;border-radius:var(--r-s);padding:6px;margin-top:6px}
+.reg-hits div{padding:4px 6px;border-bottom:1px solid var(--line)}
+.reg-hits b.art{color:var(--main-d)}
+.chk.on{background:var(--main);color:#fff;border-color:var(--main)}
+.cs-item{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;border:1px solid var(--line);border-radius:var(--r-s);padding:10px 12px;margin-bottom:8px}
+code{background:#eef1f7;padding:1px 7px;border-radius:6px;font-size:.85em;word-break:break-all}
+.wz-st input[type=checkbox]{width:20px;height:20px}
+.wz-st input:not([type=checkbox]),.wz-st select{padding:6px;border:1px solid #cbd5ea;border-radius:8px;font-size:.82rem}
+#role-badge{background:#fff3b0;color:#6b4e00}
+.adjbtn{padding:2px 8px;min-height:30px}
+.wiz-grid>*,.wiz-box{min-width:0}.wiz-box{overflow-x:auto}
 </style>
 </head>
 <body>
@@ -178,10 +197,66 @@ th{background:#f4f7ff;font-weight:700;position:sticky;top:0;z-index:1}
   <div class="i-skip">화면을 누르면 바로 시작</div>
 </div>
 
+<!-- 학교 입장 -->
+<div id="landing" class="land hide">
+  <div class="card" style="text-align:center">
+    <h2 style="margin:0 0 4px">🏫 솔로몬 <span class="badge-sol" style="background:var(--main-l);color:var(--main-d)">학년·업무 배정</span></h2>
+    <p class="note">학교마다 규정에 맞춰 순위를 정하고, 선생님들이 차례대로 학년과 업무를 고르는 시스템</p>
+    <div class="fg" style="text-align:left;margin-top:14px"><label>학교 코드 <small>(인사담당자께 받은 코드 또는 링크)</small></label>
+      <input id="land-code" placeholder="예: k7m2p9xq" autocapitalize="off" autocomplete="off" onkeydown="if(event.key==='Enter')enterFromLanding()"></div>
+    <div class="btns" style="justify-content:center"><button class="btn" onclick="enterFromLanding()">입장하기</button></div>
+    <div id="land-msg" class="note" style="margin-top:8px;color:#c62828"></div>
+    <hr style="border:none;border-top:1px dashed var(--line);margin:16px 0">
+    <button class="btn sm ghost" onclick="openCreator()">🔧 제작자 콘솔 (학교 만들기)</button>
+  </div>
+  <p class="note" style="text-align:center"><a class="creator-a" href="https://share.google/E6KnxiO3cvul0TeW5" target="_blank" rel="noopener noreferrer">📸 made by 배우자교실</a></p>
+</div>
+
+<!-- 제작자 콘솔 -->
+<div id="creator" class="hide">
+  <header>
+    <h1>🔧 솔로몬 제작자 콘솔</h1>
+    <div class="hr"><button class="btn" style="background:#fff;color:var(--main-d)" onclick="closeCreator()">← 처음 화면</button></div>
+  </header>
+  <div class="card">
+    <h3>➕ 새 학교 만들기</h3>
+    <div class="row">
+      <input id="cs-name" class="inp" placeholder="학교 이름 (예: 한빛초등학교)" style="flex:1;min-width:200px">
+      <select id="cs-tpl" class="inp"><option value="blank">빈 학교 (규정 마법사로 설정)</option><option value="baegot">배곧초 규정 템플릿 (2025.12.01.)</option></select>
+      <input id="cs-pw" class="inp" placeholder="인사담당자 비밀번호 (비우면 자동 생성)" style="min-width:230px">
+    </div>
+    <div class="btns"><button class="btn" onclick="createSchool()">학교 만들기</button></div>
+    <div id="cs-result" class="guide hide"></div>
+    <p class="note" style="margin-top:10px">① 학교를 만들면 <b>학교 코드와 인사담당자 비밀번호</b>가 나옵니다. ② 교감선생님께 비밀번호를 전달하고, ③ 교사들에게는 입장 링크만 알려 주세요. 교감선생님이 [관리자 → 규정 마법사]에서 우리 학교 규정을 반영합니다.</p>
+  </div>
+  <div class="card">
+    <h3>🏫 학교 목록</h3>
+    <div id="cs-list"></div>
+    <div class="btns">
+      <button class="btn sm ghost" onclick="downloadReg()">⬇️ 학교 목록 백업(JSON)</button>
+      <button class="btn sm ghost" onclick="changeCreatorPw()">🔑 제작자 비밀번호 변경</button>
+    </div>
+  </div>
+  <div class="card">
+    <h3>🔒 보안 안내 (꼭 읽어 주세요)</h3>
+    <p class="note" style="font-size:.85rem;line-height:1.7">
+      • 학교 코드는 <b>무작위 8자</b>라 코드를 모르면 다른 학교 데이터를 찾을 수 없습니다. 코드·링크는 해당 학교 교원에게만 알려 주세요.<br>
+      • 인사담당자·제작자 비밀번호는 <b>암호화(PBKDF2)</b>해 저장하고, 제작자의 학교 목록은 제작자 비밀번호로 암호화되어 저장됩니다. 제작자 비밀번호를 잃으면 학교 목록을 복구할 수 없으니 [학교 목록 백업]을 받아 두세요.<br>
+      • 다만 이 앱은 서버 없이 동작하므로, 비밀번호 확인은 <b>화면(브라우저) 안에서</b> 이루어집니다. 코드를 아는 사람이 개발자 도구로 데이터베이스를 직접 건드리는 것까지는 막지 못합니다. 더 강한 보호(로그인 기반 접근 통제)는 Firebase Authentication을 붙여야 하며, 현재 버전에는 들어 있지 않습니다.<br>
+      • 아래 Firebase 규칙을 <b>Firebase 콘솔 → Realtime Database → 규칙</b>에 붙여넣으면, 학교 목록을 외부에서 훑어보는 것을 막을 수 있습니다. (※ 기존 배곧초 앱을 그대로 쓰는 동안은 baegotDraft 등 3줄을 꼭 남겨 두세요)
+    </p>
+    <textarea id="fb-rules" class="ta" rows="14" readonly style="font-family:monospace"></textarea>
+    <div class="btns"><button class="btn sm ghost" onclick="copyText($('fb-rules').value)">📋 규칙 복사</button></div>
+  </div>
+</div>
+
+<div id="app" class="hide">
 <header>
-  <h1>🏫 배곧초 학년·업무 배정 <span class="badge-sol">솔로몬</span></h1>
+  <h1>🏫 <span id="school-title">학년·업무 배정</span> <span class="badge-sol">솔로몬</span></h1>
   <div class="hr">
     <a class="creator" href="https://share.google/E6KnxiO3cvul0TeW5" target="_blank" rel="noopener noreferrer">📸 made by 배우자교실(@bwj_class) <small>👈 만든이가 궁금하다면 눌러보세요!</small></a>
+    <span id="role-badge" class="badge-sol hide"></span>
+    <button class="btn" style="background:#ffffff26;border:1px solid #ffffff66" onclick="leaveSchool()">🏠 학교 바꾸기</button>
     <button class="btn" style="background:#fff;color:var(--main-d)" onclick="toggleAdmin()">🛠️ 관리자</button>
   </div>
 </header>
@@ -193,12 +268,76 @@ th{background:#f4f7ff;font-weight:700;position:sticky;top:0;z-index:1}
     <a class="creator-a" href="https://share.google/E6KnxiO3cvul0TeW5" target="_blank" rel="noopener noreferrer">📸 made by 배우자교실</a>
   </div>
 
+  <div class="cfg blue" id="wiz-card">
+    <h4 style="color:#1e3a8a">📜 우리 학교 규정 반영하기 (규정 마법사)</h4>
+    <p class="note">학교마다 학년 배정·업무 배정 순위가 다릅니다. <b>① 규정 PDF를 읽고 → ② 관련 조항을 찾아 보며 → ③ 아래 양식을 채우거나 AI 해석 결과를 불러오고 → ④ 미리보기로 순위 변화를 확인한 뒤 적용</b>하세요. 프로그램이 규정 문장을 스스로 해석해 확정하지 않습니다. 최종 확인은 인사담당자가 합니다.</p>
+    <div class="wiz-grid">
+      <div class="wiz-box">
+        <strong>① 규정 PDF 읽기</strong>
+        <div class="row"><input type="file" id="reg-file" accept="application/pdf,.pdf" onchange="loadRegPdf(this.files[0])"></div>
+        <div id="reg-status" class="note" style="margin-top:6px">PDF 안의 글자를 이 기기에서 읽어 옵니다. (규정 파일은 서버에 올리지 않습니다)</div>
+        <textarea id="reg-text" class="ta" rows="5" placeholder="PDF에서 글자를 읽지 못하면 규정 내용을 여기에 붙여넣으세요" oninput="onRegText()"></textarea>
+        <strong style="display:block;margin-top:10px">② 관련 조항 찾기 <small>(참고용)</small></strong>
+        <div class="row" id="reg-tags"></div>
+        <input id="reg-q" class="inp" style="width:100%;margin-top:6px" placeholder="직접 검색 (예: 동점, 우대, 부장)" oninput="renderRegHits()">
+        <div id="reg-hits" class="reg-hits"></div>
+      </div>
+      <div class="wiz-box">
+        <strong>③ AI에게 규정 해석 맡기기 <small>(선택)</small></strong>
+        <p class="note" style="margin-top:6px">[해석 요청문 복사] → Claude 같은 AI 채팅에 붙여넣기 → 돌아온 JSON을 아래에 붙여넣고 [양식에 불러오기]. AI의 답은 틀릴 수 있으므로 <b>양식을 규정과 하나씩 대조</b>해 확인하세요.</p>
+        <div class="btns" style="margin-top:0"><button class="btn sm" onclick="copyAiPrompt()">📋 해석 요청문 복사</button></div>
+        <textarea id="wz-json" class="ta" rows="6" placeholder="AI가 알려준 JSON을 여기에 붙여넣기" style="margin-top:8px"></textarea>
+        <div class="btns"><button class="btn sm" onclick="importWizJson()">⬇️ 양식에 불러오기</button><button class="btn sm ghost" onclick="exportWizJson()">⬆️ 현재 양식 JSON 내려받기</button></div>
+        <p class="note" style="margin-top:8px">※ 이름·점수 같은 <b>교원 개인정보는 AI에 넣지 마세요.</b> 규정 문서만 보냅니다.</p>
+      </div>
+    </div>
+    <div class="wiz-box" style="margin-top:10px">
+      <strong>④ 순위 규칙 양식</strong>
+      <div class="row"><select id="wz-preset" class="inp"></select><button class="btn sm ghost" onclick="loadWizPreset()">템플릿 불러오기</button></div>
+      <div id="wz-form" class="wz-form"></div>
+      <div class="btns"><button class="btn sm" style="background:#0284c7" onclick="previewWiz()">🔍 미리보기 (순위 변화 확인)</button><button class="btn" onclick="applyWiz()">✅ 규칙 적용</button></div>
+      <div id="wz-preview" class="guide hide"></div>
+    </div>
+  </div>
+
+  <div class="cfg" id="sec-card" style="border:2px solid #b8a3f5;background:#faf7ff">
+    <h4 style="color:#5a2fd0">🔐 보안 · 개인정보</h4>
+    <div class="guide" style="margin-top:0">
+      학교 코드: <code id="sc-code"></code> · 교사 입장 링크: <code id="sc-link"></code>
+      <button class="btn sm ghost" onclick="copyText($('sc-link').textContent)">링크 복사</button>
+    </div>
+    <strong style="font-size:.85rem;display:block;margin-top:12px">① 인사담당자 비밀번호 변경</strong>
+    <div class="row">
+      <span id="sc-oldpw-wrap"><input id="sc-old" class="inp" type="password" placeholder="현재 비밀번호" autocomplete="off"></span>
+      <input id="sc-new" class="inp" type="password" placeholder="새 비밀번호 (6자 이상)" autocomplete="off">
+      <input id="sc-new2" class="inp" type="password" placeholder="새 비밀번호 확인" autocomplete="off">
+      <button class="btn sm" onclick="changeAdminPw()">변경</button>
+    </div>
+    <strong style="font-size:.85rem;display:block;margin-top:14px">② 접근 · 공개 범위</strong>
+    <label class="chk" style="margin-top:6px"><input type="checkbox" id="sc-self"> 교사가 자기 점수·경력을 직접 입력 (끄면 인사담당자만 입력)</label>
+    <label class="chk"><input type="checkbox" id="sc-pin"> 본인 확인 PIN 사용 (다른 사람 이름으로 선택하는 것을 막음)</label>
+    <div class="row"><span style="font-size:.85rem">점수·경력 공개 범위</span>
+      <select id="sc-vis" class="inp"><option value="all">모든 교원에게 공개 (기존 시트 방식)</option><option value="self">본인 것만 보임 (순위·이름·배정은 공개)</option></select></div>
+    <div class="btns">
+      <button class="btn sm ghost" onclick="issuePins(false)">🔑 PIN 발급 (없는 사람만)</button>
+      <button class="btn sm ghost" onclick="issuePins(true)">🔄 PIN 전체 재발급</button>
+    </div>
+    <p class="note">PIN은 4자리 숫자로, 발급할 때 목록 파일로만 내려받습니다(화면에 다시 보이지 않음). 같은 학교 교원끼리의 실수·장난을 막는 용도이며, 강한 인증은 아닙니다.</p>
+    <strong style="font-size:.85rem;display:block;margin-top:12px">③ 개인정보 안내문 (교사 입력 화면에 표시)</strong>
+    <textarea id="sc-notice" class="ta" rows="6"></textarea>
+    <div class="row"><span style="font-size:.85rem">백업·변경기록 보관 기간</span><input id="sc-keep" class="inp" type="number" min="0" style="width:90px"> <span style="font-size:.85rem">일 (0 = 자동 삭제 안 함)</span></div>
+    <div class="btns"><button class="btn" onclick="saveAccess()">💾 접근·개인정보 설정 저장</button></div>
+    <strong style="font-size:.85rem;display:block;margin-top:14px;color:#991b1b">④ 학년도 종료 시 개인정보 삭제</strong>
+    <p class="note">배정이 끝나면 교원 명단·백업·기록을 지우세요. 학년·업무 설정과 규정은 남아 내년에 다시 쓸 수 있습니다. 필요한 결과는 먼저 [엑셀(CSV) 저장]으로 받아 두세요.</p>
+    <div class="btns"><button class="btn sm" style="background:#991b1b" onclick="purgeAll()">🧹 교원 명단·백업·기록 전체 삭제</button></div>
+  </div>
+
   <div class="cfg blue">
     <h4 style="color:#1e3a8a">⚖️ 인사자문위원회 배정우대 관리</h4>
-    <p class="note">순위 원칙: ① 본교에 남는 교사 → ② 일반전보내신 → ③ 만기 전보자. 우대·점수는 같은 묶음 안에서만 적용됩니다. 일반 교사는 배정우대를 입력할 수 없습니다. 규정(제13·14·28·29조)에 따라 관리자가 우대 규칙을 정하고 대상자를 체크하면 즉시 순위에 반영됩니다.</p>
+    <p class="note">순위 묶음(위 규정 마법사 ①)이 먼저이고, 우대·점수는 같은 묶음 안에서만 적용됩니다. 일반 교사는 배정우대를 입력할 수 없습니다. 학교 규정에 따라 관리자가 우대 항목을 정하고 대상자를 체크하면 즉시 순위에 반영됩니다. 규정 문서의 조항은 우대 설명(desc)에 적어 두면 근거를 남길 수 있습니다.</p>
 
     <div style="background:#fff;padding:12px;border-radius:var(--r-s);border:1px solid var(--line);margin-bottom:12px">
-      <strong style="font-size:.88rem">📌 1. 우대 규정 항목·가중치 (숫자가 작을수록 먼저, 일반교사=50)</strong>
+      <strong style="font-size:.88rem">📌 1. 우대 규정 항목·가중치 (숫자가 작을수록 먼저, 일반 교사의 기본값은 규정 마법사의 기본 가중치)</strong>
       <div class="row">
         <select id="rule-type" class="inp"><option value="GRADE">[1단계] 학년우대</option><option value="DUTY">[2단계] 업무우대</option></select>
         <input class="inp" id="rule-code" placeholder="약칭 (예: 우대5)" style="width:120px">
@@ -211,10 +350,16 @@ th{background:#f4f7ff;font-weight:700;position:sticky;top:0;z-index:1}
     </div>
 
     <div style="background:#fff;padding:12px;border-radius:var(--r-s);border:1px solid var(--line)">
-      <strong style="font-size:.88rem">☑️ 2. 교원별 우대 대상자 체크</strong>
+      <strong style="font-size:.88rem">☑️ 2. 교원별 우대 체크 · 세부 조정</strong>
+      <p class="note" style="margin:4px 0 0">▲▼는 같은 순위 묶음 안에서 순서를 한 칸씩 옮깁니다(사유가 기록에 남음). ✏️는 점수·구분 등을 고치고, 새 교원은 [교원 추가]나 아래 [일괄 등록]으로 넣습니다.</p>
+      <div class="btns"><button class="btn sm" onclick="openTeacherEditor(-1)">➕ 교원 추가</button><button class="btn sm ghost" onclick="exportTemplateCSV()">⬇️ 명단 양식(CSV)</button></div>
+      <details style="margin-top:6px"><summary style="cursor:pointer;font-size:.85rem;font-weight:700">📥 엑셀·구글시트에서 복사해 일괄 등록</summary>
+        <p class="note" style="margin-top:6px">열 순서: 성명, 점수, 본교경력, 총경력, 구분(코드 또는 표시이름), 부장희망, 당해학년점수(점수 반감 구분만). 같은 이름은 수정됩니다.</p>
+        <textarea id="bulk-text" class="ta" rows="4" placeholder="홍길동&#9;12.5&#9;2&#9;7.08&#9;X&#9;X"></textarea>
+        <div class="btns"><button class="btn sm" onclick="bulkImport()">등록하기</button></div></details>
       <div class="tw" style="max-height:320px;overflow:auto;margin-top:8px">
-        <table style="min-width:640px">
-          <thead><tr><th>순위</th><th>성명</th><th>점수</th><th>내신</th><th>부장</th><th>학년우대(제13·14조)</th><th>업무우대(제28·29조)</th></tr></thead>
+        <table style="min-width:760px">
+          <thead><tr><th>순위</th><th>성명</th><th>점수</th><th>구분</th><th>부장</th><th>학년우대</th><th>업무우대</th><th>세부 조정</th></tr></thead>
           <tbody id="admin-prio"></tbody>
         </table>
       </div>
@@ -270,17 +415,27 @@ th{background:#f4f7ff;font-weight:700;position:sticky;top:0;z-index:1}
       <input class="inp" type="number" id="g-limit" value="1" min="1" style="width:90px">
       <button class="btn sm" style="background:#0284c7" onclick="addOrUpdateGradeLimit()">➕ 등록/수정</button>
     </div>
-    <p class="note" style="margin-top:8px">※ 이름이 '전담'으로 시작하면 하나의 '전담' 그룹으로 묶여 업무가 지정됩니다.</p>
+    <p class="note" style="margin-top:8px">※ 이름이 '전담'으로 시작하면 '전담' 그룹, '해당없음'으로 시작하면 '해당없음(비담임)' 그룹으로 묶여 업무가 지정됩니다.</p>
     <div id="grade-list" class="list"></div>
   </div>
 
   <div class="cfg">
     <h4>⚙️ 2단계 업무 목록 + 학년별 선택 가능 업무 (매년 수정)</h4>
-    <p class="note">각 업무에서 선택할 수 있는 학년(그룹)에 체크하세요. 1단계에서 그 학년을 고른 교사만 해당 업무를 선택할 수 있습니다. 체크가 하나도 없으면 아무도 고를 수 없습니다.</p>
+    <p class="note">업무 부여는 해마다 달라질 수 있으니, 위 스위치로 학년별로 한 번에 켜고 끄거나 아래 표에서 업무별로 체크하세요. 각 업무에서 선택할 수 있는 학년(그룹)에 체크하세요. 1단계에서 그 학년을 고른 교사만 해당 업무를 선택할 수 있습니다. 체크가 하나도 없으면 아무도 고를 수 없습니다. 올해 기본값은 1·6학년이 업무 없음이며, 인사자문위원회 결정에 따라 열 머리글의 [전체] 버튼이나 칸 체크로 바꾸세요. <b>필수</b>를 체크한 업무(예: 생존수영)는 대상 학년의 마지막 남은 교사가 반드시 맡도록 자동으로 그 업무만 선택하게 됩니다.</p>
+    <strong style="font-size:.85rem">📌 이번 학년도 학년별 업무 부여 (눌러서 켜고 끄기)</strong>
+    <div class="row" id="grade-duty-switch" style="margin:6px 0 12px"></div>
     <div class="row" style="margin-top:0">
       <input class="inp" id="d-name" placeholder="새 업무명 (예: 스마트기기)" style="width:220px">
+      <label class="chk" style="margin:0"><input type="checkbox" id="d-must"> 필수 업무</label>
       <button class="btn sm" style="background:var(--violet)" onclick="addNewDuty()">➕ 업무 추가</button>
+      <button class="btn sm" style="background:#64748b" onclick="resetDutySettings()">🔄 학년·업무 설정 기본값 복원</button>
     </div>
+    <details style="margin-top:8px"><summary style="cursor:pointer;font-size:.85rem;font-weight:700">📥 업무 여러 개 한꺼번에 추가</summary>
+      <p class="note" style="margin-top:6px">한 줄에 업무 하나. 앞에 (전담)을 붙이면 전담 업무, 끝에 * 를 붙이면 필수 업무입니다. 선택 가능 학년은 담임 학년 전체(전담 업무는 전담·비담임)로 들어가며, 표에서 바꿀 수 있습니다.</p>
+      <textarea id="d-bulk" class="ta" rows="4" placeholder="나이스
+(전담)학교폭력
+생존수영*"></textarea>
+      <div class="btns"><button class="btn sm" style="background:var(--violet)" onclick="bulkDuties()">추가하기</button></div></details>
     <div class="row" id="d-new-grades"></div>
     <div class="btns">
       <button class="btn sm ghost" onclick="quickNew('homeroom')">담임 학년 전체</button>
@@ -306,44 +461,21 @@ th{background:#f4f7ff;font-weight:700;position:sticky;top:0;z-index:1}
 <div id="input-sec" class="card" style="border:2px solid #9ad7f7">
   <h3 style="color:#0369a1">📝 [0단계] 점수·경력 입력/수정</h3>
   <div class="form-grid">
-    <div class="fg"><label>성명 (복직자는 '(복직)홍길동')</label><input type="text" id="in-name" placeholder="예: 김건"></div>
-    <div class="fg"><label>최근 3년 합산 점수</label><input type="number" inputmode="decimal" step="0.1" id="in-score" oninput="calcLeave()"></div>
-    <div class="fg"><label>본교경력 (27.2.28.기준)</label><input type="number" inputmode="decimal" step="0.01" id="in-school" placeholder="1년1개월=1.01"></div>
-    <div class="fg"><label>교육총경력 (27.2.28.기준)</label><input type="number" inputmode="decimal" step="0.01" id="in-total" placeholder="7년8개월=7.08"></div>
+    <div class="fg"><label>성명</label><input type="text" id="in-name" placeholder="예: 홍길동"></div>
+    <div class="fg"><label>점수 (규정 안내문 참고)</label><input type="number" inputmode="decimal" step="0.1" id="in-score" oninput="calcLeave()"></div>
+    <div class="fg"><label>본교경력 (기준일 현재)</label><input type="number" inputmode="decimal" step="0.01" id="in-school" placeholder="1년1개월=1.01"></div>
+    <div class="fg"><label>교육총경력 (기준일 현재)</label><input type="number" inputmode="decimal" step="0.01" id="in-total" placeholder="7년8개월=7.08"></div>
     <div class="fg"><label>휴직 / 내신 구분</label>
-      <select id="in-transfer" onchange="calcLeave()">
-        <option value="X">X (해당없음)</option>
-        <option value="복직">복직교사</option>
-        <option value="6개월이상휴직">6개월 이상 휴직 (당해점수 1/2)</option>
-        <option value="6개월미만휴직">6개월 미만 휴직 (점수 전체)</option>
-        <option value="유예">유예교사</option>
-        <option value="1년휴직">1년 휴직 (학년·업무 제외)</option>
-        <option value="일반내신">일반전보내신 제출교사</option>
-        <option value="만기">만기 전보자 (학년·업무 제외)</option>
-      </select></div>
+      <select id="in-transfer" onchange="calcLeave()"></select></div>
     <div class="fg" id="leave-wrap" style="display:none"><label>당해(올해) 학년점수</label>
-      <select id="in-leave" onchange="calcLeave()">
-        <option value="">선택하세요</option>
-        <option value="2">교과전담 희망 (2점)</option>
-        <option value="3">2~4학년 (3점)</option>
-        <option value="4">1·5학년 (4점)</option>
-        <option value="5">6학년·임의배정 (5점)</option>
-      </select><div id="leave-prev" class="note" style="margin:4px 0 0"></div></div>
-    <div class="fg"><label>부장 희망 (제16조)</label>
-      <select id="in-head">
-        <option value="X">X (해당없음)</option>
-        <option value="1학년부장">1학년부장</option><option value="2학년부장">2학년부장</option><option value="3학년부장">3학년부장</option>
-        <option value="4학년부장">4학년부장</option><option value="5학년부장">5학년부장</option><option value="6학년부장">6학년부장</option>
-        <option value="교무부장">교무부장</option><option value="연구부장">연구부장</option><option value="정보부장">정보부장</option>
-        <option value="체육부장">체육부장</option><option value="인성부장">인성부장</option><option value="지역협력부장">지역협력부장</option>
-      </select></div>
+      <select id="in-leave" onchange="calcLeave()"></select><div id="leave-prev" class="note" style="margin:4px 0 0"></div></div>
+    <div class="fg"><label>부장 희망</label>
+      <select id="in-head"></select></div>
     <div class="fg"><button class="btn" style="width:100%" onclick="submitMyScore()">💾 내 정보 저장</button></div>
   </div>
-  <div class="guide">
-    💡 <strong>2025.12.01. 개정 규정 기준 (제13조)</strong><br>
-    • <strong>3년 학년점수:</strong> 1학년 4 · 2~4학년 3 · 5학년 4 · 6학년 5 · 교과전담 희망 2 · 임의배정 5 (제13조 4항). 임의배정 우대(제13조 12항)로 학년·업무 중 택1을 쓴 경우 +1점 가산. 6개월 이상 휴직은 '당해 학년점수'를 고르면 자동으로 1/2 반영(5항), 합산 점수는 감산 전 값(당해 점수 전체 포함)을 입력<br>
-    • <strong>동점:</strong> 본교 근무경력 → 교육 총경력 순 (9항)<br>
-    • <strong>배정우대·일반내신 처리:</strong> 교감선생님이 관리자 페이지에서 설정합니다. (수정해도 기존 우대 내역은 유지됩니다)
+  <div class="guide">💡 <strong>점수 입력 안내</strong><br><span id="in-guide"></span></div>
+  <div class="guide" style="background:#fff8e6;border-color:#f0d58a;color:#6b5a2a"><span id="in-notice"></span>
+    <div id="in-consent-wrap" style="margin-top:8px"><label class="chk"><input type="checkbox" id="in-consent"> 위 개인정보 수집·이용 안내를 확인했고 동의합니다</label></div>
   </div>
 </div>
 
@@ -378,6 +510,7 @@ th{background:#f4f7ff;font-weight:700;position:sticky;top:0;z-index:1}
   </div>
 </div>
 
+</div><!-- /app -->
 <div id="modal" class="modal"><div class="sheet">
   <div id="m-body"></div>
   <div class="btns"><button id="m-no" class="btn ghost">다시 선택</button><button id="m-yes" class="btn">예, 확정</button></div>
@@ -396,19 +529,58 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-const DEFAULT_GRADE_LIMITS = {
+/* ===== 학교 템플릿: 빈 학교(기본) / 배곧초(2025.12.01. 규정) =====
+   학교마다 다른 값(정원·업무·순위 규칙)은 전부 이 템플릿에서 시작해 '관리자 > 규정 마법사'에서 바꿉니다. */
+const DEFAULT_GRADE_LIMITS = {"1학년":4,"2학년":4,"3학년":4,"4학년":4,"5학년":4,"6학년":4,"전담1":1,"전담2":1};
+const DEFAULT_DUTIES = [];
+const DEFAULT_RULES = {gradeRules:[], dutyRules:[]};
+const DEFAULT_NOTICE =
+"【개인정보 수집·이용 안내】\n" +
+"• 수집 항목: 성명, 최근 3년 점수, 본교·총 경력, 휴직·내신 구분, 부장 희망\n" +
+"• 이용 목적: 학교 인사자문위원회 규정에 따른 학년·업무 배정 순위 산정과 선택 진행\n" +
+"• 보관 기간: 배정 종료 후 학교가 정한 기간(기본 30일) 뒤 삭제\n" +
+"• 열람: 인사담당자(교감) 및 해당 학교 교원 (점수 공개 범위는 학교 설정에 따름)\n" +
+"※ 학교의 개인정보 처리 지침에 맞게 인사담당자가 문구를 수정해 사용하세요.";
+
+const STATUS_BASE = [
+  {value:"X", label:"X (해당없음)", tier:0},
+  {value:"복직", label:"복직교사", tier:0},
+  {value:"6개월이상휴직", label:"6개월 이상 휴직 (당해점수 1/2)", tier:0, halveCurrent:true},
+  {value:"6개월미만휴직", label:"6개월 미만 휴직 (점수 전체)", tier:0},
+  {value:"유예", label:"유예교사", tier:0},
+  {value:"일반내신", label:"일반전보내신 제출교사", tier:1},
+  {value:"1년휴직", label:"1년 휴직 (학년·업무 제외)", tier:2, excludeGrade:true, excludeDuty:true, excludedLabel:"해당없음(휴직)"},
+  {value:"만기", label:"만기 전보자 (학년·업무 제외)", tier:3, excludeGrade:true, excludeDuty:true, excludedLabel:"해당없음(만기)"}
+];
+const clone = o => JSON.parse(JSON.stringify(o));
+const GENERIC_CFG = {
+  label:"기본 (점수순)",
+  tiers:["재직 교사","일반전보내신","1년 휴직","만기 전보자"],
+  statuses: clone(STATUS_BASE),
+  stage1:{headWeight:10, defaultWeight:50},
+  stage2:{headWeight:5, defaultWeight:45, gradeWeights:{}},
+  tieBreakers:[{f:"score",dir:"desc"},{f:"schoolCar",dir:"desc"},{f:"totalCar",dir:"desc"}],
+  headOptions:["1학년부장","2학년부장","3학년부장","4학년부장","5학년부장","6학년부장","교무부장","연구부장"],
+  leaveOptions:[{v:2,label:"교과전담 희망 (2점)"},{v:3,label:"2~4학년 (3점)"},{v:4,label:"1·5학년 (4점)"},{v:5,label:"6학년·임의배정 (5점)"}],
+  scoreGuide:"학교 규정에 따라 점수·경력을 입력하세요. 순위 계산 방식은 인사담당자가 규정 마법사에서 정합니다.",
+  access:{selfInput:true, requirePin:false, scoreVisibility:"all"},
+  privacyNotice:DEFAULT_NOTICE, retentionDays:30
+};
+
+const BAEGOT_GRADE_LIMITS = {
   "1학년":8,"2학년":8,"3학년":9,"4학년":9,"5학년":11,"6학년":10,
   "전담(놀이)":1,"전담1(2놀이,4영어)":1,"전담2(5영어)":1,"전담3(6영어)":1,
   "전담4(5영어,6영어)":1,"전담5(5체육)":1,"전담6(5체육,6체육)":1,
-  "전담7(6체육)":1,"전담8(2놀이,3체육)":1,"전담9(4체육)":1
+  "전담7(6체육)":1,"전담8(2놀이,3체육)":1,"전담9(4체육)":1,
+  "해당없음(비담임)":10
 };
-const DEFAULT_DUTIES = [
+const BAEGOT_DUTIES = [
   "나이스1","나이스2","교육홍보","교과서스마트통신","전자공","학생평가","기초학력1","기초학력2","글로벌교육","장학","학생동아리","독서교육",
   "생명존중,학생봉사","(전담)학교폭력1","(전담)학교폭력2","(전담)학교폭력3","교통안전","시민교육","생활안전1","생활안전2","(전담)아동장치안전","정보통신윤리",
   "sw교육","스마트기기관련","물품구입수리","(전담)학교방송","정보보안","학교스포츠클럽","(전담)paps담당","(3,4담임)생존수영","(전담)학교문화예술","(전담)문화예술교육",
   "(전담)학생선수","학생자치1","학생자치2","(전담)학부모회","환경교육","환경관리","학교축제","마을자치"
 ];
-const DEFAULT_RULES = {
+const BAEGOT_RULES = {
   gradeRules:[
     {code:"우대1",desc:"제14조1호·제13조6항 (교무·미래교육연구·보직교사 / 기년도 보직교사)",weight:10},
     {code:"우대2",desc:"제14조2호·제13조2항 (만55세·30년이상 근속교사)",weight:20},
@@ -420,84 +592,225 @@ const DEFAULT_RULES = {
     {code:"업무2",desc:"제28조4·7항·제29조 (업무우선선택권·임의배정·적임자)",weight:20}
   ]
 };
+const BAEGOT_CFG = (() => {
+  const c = clone(GENERIC_CFG);
+  c.label = "배곧초등학교 인사자문위원회 규정 (2025.12.01.)";
+  c.statuses.forEach(s => {
+    if (s.value === "유예") { s.w1 = 65; s.w2 = 55; }
+    if (s.value === "일반내신") { s.w1 = 60; s.w2 = 60; }
+    if (s.value === "만기") { s.w1 = 95; s.w2 = 95; }
+  });
+  c.stage2.gradeWeights = {"5학년":30,"2학년":40,"3학년":40,"4학년":40};
+  c.headOptions = ["1학년부장","2학년부장","3학년부장","4학년부장","5학년부장","6학년부장","교무부장","연구부장","정보부장","체육부장","인성부장","지역협력부장"];
+  c.scoreGuide =
+    "3년 학년점수: 1학년 4 · 2~4학년 3 · 5학년 4 · 6학년 5 · 교과전담 희망 2 · 임의배정 5 (제13조 4항). 임의배정 우대(제13조 12항)로 학년·업무 중 택1을 쓴 경우 +1점 가산. 6개월 이상 휴직은 '당해 학년점수'를 고르면 자동으로 1/2 반영(5항), 합산 점수는 감산 전 값(당해 점수 전체 포함)을 입력\n" +
+    "동점: 본교 근무경력 → 교육 총경력 순 (9항)\n" +
+    "배정우대·일반내신 처리: 교감선생님이 관리자 페이지에서 설정합니다. (수정해도 기존 우대 내역은 유지됩니다)";
+  return c;
+})();
+const TEMPLATES = {
+  blank:{label:"빈 학교 (규정 마법사로 직접 설정)", gradeLimits:DEFAULT_GRADE_LIMITS, duties:DEFAULT_DUTIES, rules:DEFAULT_RULES, cfg:GENERIC_CFG},
+  baegot:{label:"배곧초 규정 템플릿 (2025.12.01.)", gradeLimits:BAEGOT_GRADE_LIMITS, duties:BAEGOT_DUTIES, rules:BAEGOT_RULES, cfg:BAEGOT_CFG}
+};
+const PRESETS = {
+  generic:{label:"기본 (점수순)", cfg:GENERIC_CFG, rules:null},
+  baegot:{label:"배곧초 규정 (2025.12.01.)", cfg:BAEGOT_CFG, rules:BAEGOT_RULES}
+};
 
-let state = null, myName = "";
+let state = null, myName = "", SID = "", META = null, CONFIG = null, CFGC = null, isAdmin = false, isCreator = false;
+const verified = new Set();
+const $ = id => document.getElementById(id);
+const R = p => db.ref("schools/" + SID + (p ? "/" + p : ""));
 const esc = s => String(s==null?"":s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
+const nl2br = s => esc(s).replace(/\n/g, "<br>");
+const tpl = () => TEMPLATES[(META && META.template) || "blank"] || TEMPLATES.blank;
 
+/* ---------- 학교 설정(규정) 읽기: 비어 있는 값은 기본값으로 채움 ---------- */
+function normCfg(c){
+  const g = GENERIC_CFG, o = c || {};
+  const arr = (a, d) => Array.isArray(a) && a.length ? a : d;
+  return {
+    label: o.label || "",
+    tiers: arr(o.tiers, g.tiers),
+    statuses: arr(o.statuses, g.statuses),
+    stage1: {...g.stage1, ...(o.stage1 || {})},
+    stage2: {...g.stage2, ...(o.stage2 || {}), gradeWeights: {...((o.stage2 || {}).gradeWeights || {})}},
+    tieBreakers: arr(o.tieBreakers, g.tieBreakers),
+    headOptions: arr(o.headOptions, g.headOptions),
+    leaveOptions: arr(o.leaveOptions, g.leaveOptions),
+    scoreGuide: typeof o.scoreGuide === "string" ? o.scoreGuide : g.scoreGuide,
+    access: {...g.access, ...(o.access || {})},
+    privacyNotice: typeof o.privacyNotice === "string" ? o.privacyNotice : g.privacyNotice,
+    retentionDays: o.retentionDays != null ? o.retentionDays : g.retentionDays
+  };
+}
+const setConfig = c => { CONFIG = c; CFGC = normCfg(c); };
+const cfg = () => CFGC || (CFGC = normCfg(null));
+const statusByValue = (v, c) => (c || cfg()).statuses.find(s => s.value === v);
+// 교원의 '구분'(휴직·내신 등) 찾기. 옛 데이터의 변형 표기는 포함 여부로 한 번 더 찾음
+function statusOf(t, c){
+  const f = (t.transferF || "X").trim(), L = (c || cfg()).statuses;
+  return L.find(s => s.value === f) || L.find(s => s.value !== "X" && f.includes(s.value)) || L.find(s => s.value === "X") || L[0];
+}
+const tierOf = (t, c) => { const s = statusOf(t, c); return s && s.tier != null ? s.tier : 0; };
+const isHead = t => ((t.headHope || "").trim()).includes("부장");
+
+// 학교 설정(구분·부장 선택지·안내문)을 교사 입력 화면에 반영. 이미 고른 값은 가능한 한 유지
+function fillInputControls(){
+  const c = cfg();
+  const keep = (id, html) => { const el = $(id), v = el.value; el.innerHTML = html; if ([...el.options].some(o => o.value === v)) el.value = v; };
+  keep("in-transfer", c.statuses.map(s => `<option value="${esc(s.value)}">${esc(s.label)}</option>`).join(""));
+  keep("in-head", `<option value="X">X (해당없음)</option>` + c.headOptions.map(h => `<option value="${esc(h)}">${esc(h)}</option>`).join(""));
+  keep("in-leave", `<option value="">선택하세요</option>` + c.leaveOptions.map(o => `<option value="${esc(o.v)}">${esc(o.label)}</option>`).join(""));
+  $("in-guide").innerHTML = nl2br(c.scoreGuide);
+  $("in-notice").innerHTML = nl2br(c.privacyNotice);
+  calcLeave();
+}
+
+let initing = false;
 setTimeout(dismissIntro, 4350);
-function dismissIntro(){ const e=document.getElementById("intro"); if(e) e.classList.add("fade"); }
+function dismissIntro(){ const e = $("intro"); if (e) e.classList.add("fade"); }
 
-db.ref("baegotDraft").on("value", snap => {
-  state = snap.val();
-  if (!state) { loadSampleData(); return; }
-  if (!state.gradeLimits) db.ref("baegotDraft/gradeLimits").set(DEFAULT_GRADE_LIMITS);
-  if (!state.duties) db.ref("baegotDraft/duties").set(DEFAULT_DUTIES);
-  if (!state.priorityRules) db.ref("baegotDraft/priorityRules").set(DEFAULT_RULES);
-  if (!state.naesinPolicy) {
-    const up = {naesinPolicy:"LAST"};
-    if (!state.stage) up.teachers = sortTeachers([...(state.teachers||[])], "GRADE");
-    db.ref("baegotDraft").update(up);
+/* ---------- 학교 데이터 연결 ---------- */
+let OFFS = [], LOADED = {};
+function listen(ref, cb){ ref.on("value", cb); OFFS.push(() => ref.off("value", cb)); }
+function detachAll(){ OFFS.forEach(f => { try { f(); } catch(e){} }); OFFS = []; LOADED = {}; state = null; CONFIG = null; CFGC = null; initing = false; }
+function maybeRender(){ if (LOADED.draft && LOADED.config && state) { render(); renderAdmin(); } }
+function attachSchool(){
+  listen(R("config"), s => { setConfig(s.val()); LOADED.config = true; fillInputControls(); maybeRender(); });
+  listen(R("meta"), s => { const m = s.val(); if (m) { META = m; $("school-title").textContent = m.name + " 학년·업무 배정"; document.title = "솔로몬 - " + m.name; } });
+  listen(R("draft"), snap => {
+    state = snap.val(); LOADED.draft = true;
+    if (!state) {
+      if (!initing) { initing = true; const t = tpl(); R("draft").set({stage:0, currentTurn:0, priorityConfirmed:false, naesinPolicy:"LAST", gradeLimits:t.gradeLimits, duties:t.duties, priorityRules:t.rules}); }
+      return;
+    }
+    const t = tpl();
+    if (!state.gradeLimits) R("draft/gradeLimits").set(t.gradeLimits);
+    if (!state.duties && t.duties.length) R("draft/duties").set(t.duties);
+    if (!state.priorityRules && t.rules.gradeRules.length) R("draft/priorityRules").set(t.rules);
+    if (!state.naesinPolicy) R("draft/naesinPolicy").set("LAST");
+    maybeRender();
+  });
+  attachLogs();
+}
+
+/* ---------- 본인 선택 (PIN 사용 시 본인 확인) ---------- */
+$("user-select").addEventListener("change", e => selectUser(e.target.value));
+async function selectUser(v){
+  const sel = $("user-select");
+  if (v && cfg().access.requirePin && !isAdmin && !verified.has(v)) {
+    const t = ((state && state.teachers) || []).find(x => x.name === v);
+    if (!t || !t.pinH) { alert("본인 확인용 PIN이 아직 발급되지 않았습니다. 인사담당자(교감)께 문의하세요."); myName = ""; sel.value = ""; return render(); }
+    const pin = await askPrompt(`<b>${esc(v)}</b> 선생님 본인 확인<br>PIN 4자리를 입력하세요`, {password:true, numeric:true});
+    if (pin === null || (await sha256hex(`${SID}|${v}|${pin.trim()}`)) !== t.pinH) {
+      if (pin !== null) alert("PIN이 맞지 않습니다.");
+      myName = ""; sel.value = ""; return render();
+    }
+    verified.add(v);
   }
-  render(); renderAdmin();
-});
-
-document.getElementById("user-select").addEventListener("change", e => {
-  myName = e.target.value;
+  myName = v;
   const me = state && state.teachers && state.teachers.find(t => t.name === myName);
   if (me) {
-    document.getElementById("in-name").value = me.name;
-    document.getElementById("in-score").value = me.scoreRaw != null ? me.scoreRaw : me.score;
-    document.getElementById("in-school").value = me.schoolCar;
-    document.getElementById("in-total").value = me.totalCar;
-    document.getElementById("in-transfer").value = me.transferF || "X";
-    document.getElementById("in-head").value = me.headHope || "X";
-    document.getElementById("in-leave").value = me.leaveYear ? String(me.leaveYear) : "";
+    $("in-name").value = me.name;
+    $("in-score").value = me.scoreRaw != null ? me.scoreRaw : me.score;
+    $("in-school").value = me.schoolCar;
+    $("in-total").value = me.totalCar;
+    $("in-transfer").value = me.transferF || "X";
+    $("in-head").value = me.headHope || "X";
+    $("in-leave").value = me.leaveYear ? String(me.leaveYear) : "";
     calcLeave();
   }
   render();
-});
+}
 
 function calcLeave(){
-  const on = document.getElementById("in-transfer").value === "6개월이상휴직";
-  document.getElementById("leave-wrap").style.display = on ? "block" : "none";
-  const raw = parseFloat(document.getElementById("in-score").value) || 0, y = parseFloat(document.getElementById("in-leave").value) || 0;
-  document.getElementById("leave-prev").textContent = !on ? "" : y ? `자동 계산: ${raw} − ${y}/2 = ${raw - y / 2}점` : "당해 학년점수를 선택하세요";
-}
-function toggleAdmin(){
-  const p = document.getElementById("admin");
-  if (p.style.display === "block") { p.style.display = "none"; return; }
-  const pw = prompt("관리자 비밀번호를 입력하세요");
-  if (pw === "1234") { p.style.display = "block"; renderAdmin(); }
-  else if (pw !== null) alert("비밀번호가 일치하지 않습니다.");
+  const S = statusByValue($("in-transfer").value), on = !!(S && S.halveCurrent);
+  $("leave-wrap").style.display = on ? "block" : "none";
+  const raw = parseFloat($("in-score").value) || 0, y = parseFloat($("in-leave").value) || 0;
+  $("leave-prev").textContent = !on ? "" : y ? `자동 계산: ${raw} − ${y}/2 = ${raw - y / 2}점` : "당해 학년점수를 선택하세요";
 }
 
+/* ---------- 관리자(인사담당자) 로그인 ---------- */
+let pwFails = 0, pwLockUntil = 0;
+async function checkAdminPw(pw){
+  if (Date.now() < pwLockUntil) { alert(`비밀번호를 여러 번 틀려 ${Math.ceil((pwLockUntil - Date.now()) / 1000)}초 뒤에 다시 시도할 수 있어요.`); return false; }
+  const ok = !!(META && META.hash) && (await pbkdf2Bits(pw, META.salt)) === META.hash;
+  if (ok) { pwFails = 0; return true; }
+  if (++pwFails >= 5) { pwLockUntil = Date.now() + 30000; pwFails = 0; }
+  return false;
+}
+function setRoleBadge(){
+  const b = $("role-badge");
+  b.classList.toggle("hide", !isAdmin);
+  b.textContent = isCreator ? "👑 제작자 권한" : "🛠️ 인사담당자";
+}
+async function toggleAdmin(){
+  const p = $("admin");
+  if (p.style.display === "block") { p.style.display = "none"; return; }
+  if (!isAdmin) {
+    const pw = await askPrompt("🛠️ 인사담당자(교감) 비밀번호", {password:true});
+    if (pw === null) return;
+    if (!(await checkAdminPw(pw))) return alert("비밀번호가 일치하지 않습니다.");
+    isAdmin = true;
+  }
+  setRoleBadge();
+  p.style.display = "block";
+  openAdminUI();
+  render();
+}
+
+const canSee = t => isAdmin || cfg().access.scoreVisibility !== "self" || t.name === myName;
+
 /* ---------- 학년 그룹 / 업무-학년 매핑 ---------- */
-const groupOf = g => !g ? "" : (g.startsWith("전담") ? "전담" : g);
+const groupOf = g => !g ? "" : (g.startsWith("전담") ? "전담" : g.startsWith("해당없음") ? "해당없음" : g);
+const NOHOME = ["전담","해당없음"];   // 담임이 아닌 그룹
 function getGroups(){
   const lim = (state && state.gradeLimits) || DEFAULT_GRADE_LIMITS, out = [];
   Object.keys(lim).forEach(k => { const g = groupOf(k); if (!out.includes(g)) out.push(g); });
   return out;
 }
+// 기본값: 전담 업무는 전담·해당없음, 3·4담임 업무는 3·4학년, 그 외 업무는 2~5학년 (올해 1·6학년은 업무 없음 - 관리자가 변경 가능)
 function defaultDutyGrades(name, groups){
-  if (name.startsWith("(전담)")) return ["전담"];
-  const m = name.match(/^\(([\d,]+)담임\)/);
-  if (m) return m[1].split(",").map(n => n + "학년");
-  return groups.filter(g => g !== "전담");
+  let g;
+  if (name.startsWith("(전담)")) g = ["전담","해당없음"];
+  else {
+    const m = name.match(/^\(([\d,]+)담임\)/);
+    g = m ? m[1].split(",").map(n => n + "학년") : groups.filter(x => !NOHOME.includes(x) && x !== "1학년" && x !== "6학년");
+  }
+  return g.filter(x => groups.includes(x));
 }
+const defaultMust = name => name.includes("생존수영");
 function getDuties(){
   const groups = getGroups();
   return ((state && state.duties) || DEFAULT_DUTIES).map(d =>
-    typeof d === "string" ? {name:d, grades:defaultDutyGrades(d, groups)} : {name:d.name, grades:d.grades || []});
+    typeof d === "string" ? {name:d, grades:defaultDutyGrades(d, groups), must:defaultMust(d)} : {name:d.name, grades:d.grades || [], must:!!d.must});
 }
 function gradeLabel(grades){
-  const groups = getGroups(), home = groups.filter(g => g !== "전담");
-  const hasJ = grades.includes("전담"), h = grades.filter(g => g !== "전담");
+  const groups = getGroups(), home = groups.filter(g => !NOHOME.includes(g));
+  const h = grades.filter(g => !NOHOME.includes(g));
   if (!grades.length) return "지정 없음";
   let s = (h.length === home.length && home.length) ? "담임 전체" : h.map(g => g.replace("학년","")).join("·") + (h.length ? "학년" : "");
-  if (hasJ) s += (s ? "+" : "") + "전담";
+  if (grades.includes("전담")) s += (s ? "+" : "") + "전담";
+  if (grades.includes("해당없음")) s += (s ? "+" : "") + "비담임";
   return s;
 }
-const saveDuties = list => db.ref("baegotDraft/duties").set(list);
+// 필수 업무: 대상 학년에 남은 교사 수가 비어 있는 필수 업무 수와 같아지면, 그 교사는 필수 업무만 고를 수 있음
+function forcedDuties(teachers, idx){
+  const t = teachers[idx]; if (!t) return [];
+  const g = groupOf(t.grade || ""), duties = getDuties();
+  const free = d => !teachers.some(x => x.duty === d.name);
+  const sig = d => [...d.grades].sort().join("|");
+  const out = [];
+  duties.filter(d => d.must && free(d) && d.grades.includes(g)).forEach(d => {
+    const U = duties.filter(x => x.must && free(x) && sig(x) === sig(d)).length;
+    let R = 0;
+    for (let i = idx; i < teachers.length; i++) if (!teachers[i].duty && d.grades.includes(groupOf(teachers[i].grade || ""))) R++;
+    if (R <= U) out.push(d.name);
+  });
+  return out;
+}
+const saveDuties = list => R("draft/duties").set(list);
 
 /* ---------- 관리자 화면 ---------- */
 function renderAdmin(){
@@ -514,7 +827,8 @@ function renderAdmin(){
     const gs = t.gradePriorities || [], ds = t.dutyPriorities || [];
     const gc = gR.map(r => `<label class="chk" title="${esc(r.desc)}"><input type="checkbox" ${gs.includes(r.code)?"checked":""} onchange="toggleTP(${i},'GRADE','${esc(r.code)}',this.checked)"><b>${esc(r.code)}</b></label>`).join("") || "-";
     const dc = dR.map(r => `<label class="chk" title="${esc(r.desc)}"><input type="checkbox" ${ds.includes(r.code)?"checked":""} onchange="toggleTP(${i},'DUTY','${esc(r.code)}',this.checked)"><b>${esc(r.code)}</b></label>`).join("") || "-";
-    pb.innerHTML += `<tr><td><b>${t.rank}</b></td><td><b>${esc(t.name)}</b></td><td>${t.score}</td><td>${esc(t.transferF||"X")}</td><td>${esc(t.headHope||"X")}</td><td style="text-align:left">${gc}</td><td style="text-align:left">${dc}</td></tr>`;
+    pb.innerHTML += `<tr><td><b>${t.rank}</b></td><td><b>${esc(t.name)}</b></td><td>${t.score}</td><td>${esc(t.transferF||"X")}</td><td>${esc(t.headHope||"X")}</td><td style="text-align:left">${gc}</td><td style="text-align:left">${dc}</td>` +
+      `<td style="white-space:nowrap"><button class="btn sm ghost adjbtn" title="한 칸 위로" onclick="moveAdj(${i},1)">▲</button><button class="btn sm ghost adjbtn" title="한 칸 아래로" onclick="moveAdj(${i},-1)">▼</button><button class="btn sm ghost adjbtn" title="정보 수정" onclick="openTeacherEditor(${i})">✏️</button>${t.adj ? ` <span class="tg" title="${esc(t.adjWhy||"")}">수동 ${t.adj>0?"+":""}${t.adj}</span><button class="tag" style="border:none;cursor:pointer" onclick="clearAdj(${i})">↺</button>` : ""}${t.pinH ? " 🔑" : ""}</td></tr>`;
   });
 
   const ok = !!state.priorityConfirmed;
@@ -534,18 +848,50 @@ function renderAdmin(){
   const prev = new Set([...nb.querySelectorAll("input:checked")].map(i => i.value));
   nb.innerHTML = groups.map(g => `<label class="chk"><input type="checkbox" value="${esc(g)}" ${prev.has(g)?"checked":""}>${esc(g)}</label>`).join("");
 
+  // 학년별 업무 부여 스위치
+  const duties0 = getDuties();
+  document.getElementById("grade-duty-switch").innerHTML = groups.map(g => {
+    const ap = duties0.filter(d => applicable(d, g)), on = ap.filter(d => d.grades.includes(g)).length;
+    const st = !ap.length ? "해당 업무 없음" : on === ap.length ? "업무 있음" : on === 0 ? "업무 없음" : `일부 ${on}/${ap.length}`;
+    const bg = on === 0 ? "#eef1f7;color:#5b6682" : on === ap.length ? "#e3f6ec;color:#15803d" : "#fff1e3;color:#b45a0a";
+    return `<button class="btn sm" style="background:${bg};border:1px solid #cbd5ea" data-g="${esc(g)}" onclick="toggleColumn(this.dataset.g)">${esc(g)} · ${st}</button>`;
+  }).join("");
   // 업무 × 학년 매트릭스
   const duties = getDuties(), mx = document.getElementById("duty-matrix");
-  let h = `<thead><tr><th>업무명</th>${groups.map(g => `<th>${esc(g)}</th>`).join("")}<th>삭제</th></tr></thead><tbody>`;
+  let h = `<thead><tr><th>업무명</th>${groups.map(g => `<th>${esc(g)}<br><button class="tag" style="border:none;cursor:pointer;font-size:.7rem;padding:2px 8px" data-g="${esc(g)}" onclick="toggleColumn(this.dataset.g)">전체</button></th>`).join("")}<th>필수</th><th>삭제</th></tr></thead><tbody>`;
   duties.forEach((d, i) => {
     h += `<tr><td class="${d.name.startsWith("(전담)")?"jd1":""}">${esc(d.name)}</td>` +
       groups.map(g => `<td><input type="checkbox" ${d.grades.includes(g)?"checked":""} onchange="toggleDutyGrade(${i},'${esc(g)}',this.checked)"></td>`).join("") +
+      `<td><input type="checkbox" ${d.must?"checked":""} onchange="toggleMust(${i},this.checked)"></td>` +
       `<td><button class="tag" style="border:none;cursor:pointer;color:var(--red);font-weight:800" onclick="removeDuty(${i})">×</button></td></tr>`;
   });
   mx.innerHTML = h + "</tbody>";
 }
 function quickNew(kind){
   document.querySelectorAll("#d-new-grades input").forEach(i => { i.checked = kind === "jeondam" ? i.value === "전담" : i.value !== "전담"; });
+}
+// 이 학년(그룹)에 줄 수 있는 업무인지: 담임 학년은 (전담) 업무 제외, 전담·비담임은 (전담) 업무만, (3,4담임) 같은 업무는 해당 학년만
+function applicable(d, g){
+  const isJ = d.name.startsWith("(전담)");
+  if (NOHOME.includes(g)) return isJ;
+  if (isJ) return false;
+  const m = d.name.match(/^\(([\d,]+)담임\)/);
+  return m ? m[1].split(",").map(n => n + "학년").includes(g) : true;
+}
+function toggleColumn(g){
+  const list = getDuties(), ap = list.filter(d => applicable(d, g)), all = ap.length > 0 && ap.every(d => d.grades.includes(g));
+  list.forEach(d => { const s = new Set(d.grades); if (all) s.delete(g); else if (applicable(d, g)) s.add(g); d.grades = [...s]; });
+  log(`[관리자] ${g} 업무 부여 ${all ? "끔" : "켬"}`); saveDuties(list);
+}
+function toggleMust(i, on){
+  const list = getDuties(); list[i].must = on;
+  log(`[관리자] 필수 업무 ${on ? "지정" : "해제"}: ${list[i].name}`); saveDuties(list);
+}
+function resetDutySettings(){
+  if (!confirm("학년·전담 정원과 업무(학년별 선택 가능·필수 표시)를 이번 기본값으로 되돌릴까요?\n교사 명단과 진행 상태는 그대로이고, 되돌리기 전에 자동 백업됩니다.")) return;
+  backupNow("설정 기본값 복원 전");
+  log("[관리자] 학년·업무 설정 기본값 복원");
+  R("draft").update({gradeLimits:tpl().gradeLimits, duties:tpl().duties});
 }
 function toggleDutyGrade(i, g, on){
   const list = getDuties(), s = new Set(list[i].grades);
@@ -560,8 +906,8 @@ function addNewDuty(){
   if (!grades.length) return alert("선택 가능한 학년(그룹)을 하나 이상 체크하세요.");
   const list = getDuties();
   if (list.some(d => d.name === name)) return alert("이미 있는 업무명입니다.");
-  list.push({name, grades});
-  saveDuties(list).then(() => { document.getElementById("d-name").value = ""; });
+  list.push({name, grades, must:document.getElementById("d-must").checked});
+  saveDuties(list).then(() => { document.getElementById("d-name").value = ""; document.getElementById("d-must").checked = false; });
 }
 function removeDuty(i){
   const list = getDuties();
@@ -575,7 +921,7 @@ function resortAndSave(extra){
   const policy = extra.naesinPolicy || state.naesinPolicy || "LAST";
   extra.teachers = sortTeachers([...(state.teachers || [])], mode, rules, policy);
   if (state.stage > 0) extra.currentTurn = nextTurn(extra.teachers, state.stage, 0);
-  return db.ref("baegotDraft").update(extra);
+  return R("draft").update(extra);
 }
 function setPolicy(v){ resortAndSave({naesinPolicy:v}); }
 function addOrUpdatePriorityRule(){
@@ -599,8 +945,8 @@ function removeRule(type, code){
   resortAndSave({priorityRules:rules});
 }
 function resetDefaultRules(){
-  if (!confirm("우대 규정을 기본값(규정집 기준)으로 복원할까요?")) return;
-  resortAndSave({priorityRules:DEFAULT_RULES});
+  if (!confirm("우대 규정을 이 학교 템플릿의 기본값으로 복원할까요?")) return;
+  resortAndSave({priorityRules:clone(tpl().rules)});
 }
 function toggleTP(i, type, code, on){
   const list = JSON.parse(JSON.stringify(state.teachers));
@@ -612,106 +958,185 @@ function toggleTP(i, type, code, on){
   const mode = state.stage === 2 ? "DUTY" : "GRADE";
   const sl = sortTeachers(list, mode), up = {teachers: sl};
   if (state.stage > 0) up.currentTurn = nextTurn(sl, state.stage, 0);
-  db.ref("baegotDraft").update(up);
+  R("draft").update(up);
 }
-const togglePriorityConfirm = v => db.ref("baegotDraft/priorityConfirmed").set(v);
+const togglePriorityConfirm = v => R("draft/priorityConfirmed").set(v);
 
 function addOrUpdateGradeLimit(){
   const name = document.getElementById("g-name").value.trim();
   const limit = parseInt(document.getElementById("g-limit").value) || 1;
   if (!name) return alert("학년/전담 명칭을 입력하세요.");
   const lim = {...(state.gradeLimits || DEFAULT_GRADE_LIMITS)}; lim[name] = limit;
-  db.ref("baegotDraft/gradeLimits").set(lim).then(() => { document.getElementById("g-name").value = ""; });
+  R("draft/gradeLimits").set(lim).then(() => { document.getElementById("g-name").value = ""; });
 }
 function editGradeLimit(n, cur){
   const v = prompt(`[${n}] 새 정원(명)`, cur); if (v === null) return;
   const num = parseInt(v); if (isNaN(num) || num <= 0) return alert("올바른 숫자를 입력하세요.");
   const lim = {...(state.gradeLimits || DEFAULT_GRADE_LIMITS)}; lim[n] = num;
-  db.ref("baegotDraft/gradeLimits").set(lim);
+  R("draft/gradeLimits").set(lim);
 }
 function removeGradeLimit(n){
   if (!confirm(`[${n}] 항목을 삭제할까요?`)) return;
   const lim = {...(state.gradeLimits || DEFAULT_GRADE_LIMITS)}; delete lim[n];
-  db.ref("baegotDraft/gradeLimits").set(lim);
+  R("draft/gradeLimits").set(lim);
 }
 
 /* ---------- 0단계: 교사 입력 ---------- */
-function submitMyScore(){
-  if (state && state.stage !== 0) return alert("점수 입력 기간이 끝나 수정할 수 없습니다.");
-  const name = document.getElementById("in-name").value.trim();
+// 입력값 → 저장용 교원 정보. 휴직 반감·부장 자동 배정 처리는 여기 한 곳에서만 합니다.
+function buildEntry(i, prev){
+  const S = statusByValue(i.transferF);
+  let score = i.rawScore, leaveYear = 0;
+  if (S && S.halveCurrent) { leaveYear = i.leaveYear || 0; score = i.rawScore - leaveYear / 2; }
+  const e = {
+    name:i.name, score, scoreRaw:i.rawScore, leaveYear, schoolCar:i.schoolCar, totalCar:i.totalCar,
+    transferF:i.transferF, headHope:i.headHope,
+    gradePriorities: prev ? (prev.gradePriorities || []) : [],
+    dutyPriorities: prev ? (prev.dutyPriorities || []) : [],
+    grade: prev ? (prev.grade || "") : "", duty: prev ? (prev.duty || "") : ""
+  };
+  if (prev && prev.adj) e.adj = prev.adj;
+  if (prev && prev.adjWhy) e.adjWhy = prev.adjWhy;
+  if (prev && prev.pinH) e.pinH = prev.pinH;
+  if (isHead({headHope:i.headHope})) { const m = i.headHope.match(/(\d+)학년/); if (m) e.grade = m[1] + "학년"; e.duty = "해당없음"; }
+  return e;
+}
+async function submitMyScore(){
+  if (state && state.stage !== 0 && !isAdmin) return alert("점수 입력 기간이 끝나 수정할 수 없습니다. 인사담당자에게 문의하세요.");
+  const a = cfg().access;
+  if (!isAdmin && !a.selfInput) return alert("이 학교는 인사담당자가 점수를 입력합니다.");
+  if (!isAdmin && !$("in-consent").checked) return alert("개인정보 수집·이용 안내를 확인하고 동의란에 체크해 주세요.");
+  const name = $("in-name").value.trim();
   if (!name) return alert("성함을 입력해 주세요.");
-  const rawScore = parseFloat(document.getElementById("in-score").value) || 0;
-  const schoolCar = parseFloat(document.getElementById("in-school").value) || 0;
-  const totalCar = parseFloat(document.getElementById("in-total").value) || 0;
-  const transferF = document.getElementById("in-transfer").value;
-  let score = rawScore, leaveYear = 0;
-  if (transferF === "6개월이상휴직") {
-    leaveYear = parseFloat(document.getElementById("in-leave").value) || 0;
-    if (!leaveYear) return alert("6개월 이상 휴직은 '당해 학년점수'를 선택해 주세요.");
-    score = rawScore - leaveYear / 2;
-  }
-  const headHope = document.getElementById("in-head").value;
   const list = (state && state.teachers) ? [...state.teachers] : [];
   const k = list.findIndex(t => t.name === name);
-  let autoGrade = "", autoDuty = "";
-  if (headHope.includes("부장")) { const m = headHope.match(/([1-6])학년/); if (m) autoGrade = m[1] + "학년"; autoDuty = "해당없음"; }
-  const entry = {
-    name, score, scoreRaw: rawScore, leaveYear, schoolCar, totalCar, transferF, headHope,
-    gradePriorities: k >= 0 ? (list[k].gradePriorities || []) : [],
-    dutyPriorities: k >= 0 ? (list[k].dutyPriorities || []) : [],
-    grade: k >= 0 ? (autoGrade || list[k].grade || "") : autoGrade,
-    duty: k >= 0 ? (autoDuty || list[k].duty || "") : autoDuty
-  };
+  if (!isAdmin && a.requirePin) {
+    if (k < 0) return alert("명단에 없는 이름입니다. 인사담당자에게 문의하세요.");
+    if (!verified.has(name)) return alert("본인 확인(PIN)을 먼저 해 주세요. 위에서 본인 이름을 선택하면 PIN을 묻습니다.");
+  }
+  const rawScore = parseFloat($("in-score").value) || 0;
+  const schoolCar = parseFloat($("in-school").value) || 0;
+  const totalCar = parseFloat($("in-total").value) || 0;
+  const transferF = $("in-transfer").value;
+  const S = statusByValue(transferF);
+  let leaveYear = 0;
+  if (S && S.halveCurrent) {
+    leaveYear = parseFloat($("in-leave").value) || 0;
+    if (!leaveYear) return alert("이 구분은 '당해 학년점수'를 선택해야 합니다.");
+  }
+  const entry = clone(buildEntry({name, rawScore, schoolCar, totalCar, transferF, headHope:$("in-head").value, leaveYear}, k >= 0 ? list[k] : null));
   if (k >= 0) list[k] = entry; else list.push(entry);
   myName = name;
-  db.ref("baegotDraft").update({stage:0, teachers: sortTeachers(list, "GRADE")})
-    .then(() => alert(`✅ [${name}] 선생님 정보가 저장되었습니다.`));
+  await R("draft").update({stage: state && state.stage ? state.stage : 0, teachers: clone(sortTeachers(list, state && state.stage === 2 ? "DUTY" : "GRADE"))});
+  log(`${isAdmin ? "[관리자] " : ""}${name} 정보 ${k >= 0 ? "수정" : "등록"}`);
+  alert(`✅ [${name}] 선생님 정보가 저장되었습니다.`);
 }
 
-/* ---------- 규정 기반 우선순위 ---------- */
+/* ---------- 단계 제어 ---------- */
+function setStage0(){ R("draft/stage").set(0); alert("📝 0단계(점수 입력·우대 체크)가 열렸습니다."); }
+// '학년/업무에서 제외'로 설정된 구분(만기·1년 휴직 등)은 자동으로 해당없음 처리
+function applyExclusion(t, which){
+  const S = statusOf(t);
+  if (!S) return t;
+  const lbl = S.excludedLabel || "해당없음(제외)";
+  const r = {...t};
+  if ((which === "grade" || which === "both") && S.excludeGrade) r.grade = lbl;
+  if ((which === "duty" || which === "both") && S.excludeDuty) r.duty = lbl;
+  return r;
+}
+function startStage1(){
+  if (!state || !state.teachers || !state.teachers.length) return alert("등록된 교원이 없습니다.");
+  if (!state.priorityConfirmed) return alert("⚠️ 먼저 '배정우대 최종 확인'을 체크해 주세요.");
+  let s = sortTeachers([...state.teachers], "GRADE").map(t => {
+    t = applyExclusion(t, "both");
+    if (!isHead(t) || (statusOf(t).excludeGrade)) return t;
+    const m = (t.headHope || "").match(/(\d+)학년/);
+    return {...t, grade: m ? m[1] + "학년" : (t.grade || ""), duty: "해당없음"};
+  });
+  backupNow("1단계 시작 전"); log("1단계 시작");
+  R("draft").update({stage:1, teachers:clone(s), currentTurn:nextTurn(s, 1, 0)});
+  alert("✅ 1단계 학년 선택이 시작되었습니다.");
+}
+function startStage2(){
+  if (!state || !state.teachers) return alert("교원 명단이 없습니다.");
+  if (!state.priorityConfirmed) return alert("⚠️ 배정우대 확인 체크가 해제되어 있습니다.");
+  const noGrade = state.teachers.filter(t => !t.grade).map(t => t.name);
+  if (noGrade.length && !confirm(`아직 학년을 고르지 않은 교사가 있습니다 (${noGrade.join(", ")}).\n학년이 없으면 업무를 선택할 수 없습니다. 그래도 시작할까요?`)) return;
+  const duties = getDuties();
+  const base = t => isHead(t) ? {...t, duty:"해당없음"} : applyExclusion(t, "duty");
+  let s = sortTeachers([...state.teachers], "DUTY").map(base);
+  // 선택한 학년에 지정된 업무가 하나도 없으면 업무 없음으로 자동 처리
+  const auto = [];
+  s = s.map(t => {
+    if (t.duty || !t.grade) return t;
+    const g = groupOf(t.grade);
+    if (duties.some(d => d.grades.includes(g))) return t;
+    auto.push(`${t.name}(${t.grade})`);
+    return {...t, duty:"해당없음(업무 없음)"};
+  });
+  const warn = [];
+  duties.filter(d => d.must).forEach(d => { if (!s.some(t => !t.duty && d.grades.includes(groupOf(t.grade)))) warn.push(d.name); });
+  let msg = "2단계 업무 선택을 시작할까요?";
+  if (auto.length) msg += `\n\n▶ 선택 학년에 지정된 업무가 없어 '업무 없음'으로 처리됩니다 (${auto.length}명):\n${auto.join(", ")}\n(바꾸려면 취소하고 업무 설정에서 학년을 켠 뒤 다시 시작하세요)`;
+  if (warn.length) msg += `\n\n⚠️ 필수 업무를 맡을 수 있는 교사가 없습니다: ${warn.join(", ")}`;
+  if (!confirm(msg)) return;
+  backupNow("2단계 시작 전"); log("2단계 시작" + (auto.length ? ` (업무 없음 처리 ${auto.length}명)` : ""));
+  R("draft").update({stage:2, teachers:clone(s), currentTurn:nextTurn(s, 2, 0)});
+  alert("✅ 2단계 업무 선택이 시작되었습니다. (학교 설정의 업무 순서 기준)");
+}
+
+/* ---------- 규정 기반 우선순위 (모든 기준은 학교 설정 cfg에서 읽음) ---------- */
 const curPolicy = () => (state && state.naesinPolicy) || "LAST";
 
-function gradePrio(t, rules, policy){
-  const h = (t.headHope || "").trim(), f = (t.transferF || "").trim(), gp = t.gradePriorities || [];
-  const gR = (rules && rules.gradeRules) || DEFAULT_RULES.gradeRules;
-  // 제13조 11항·제17조 4항: 일반전보내신은 최후순위
-  if (f.includes("만기")) return 95;  // 만기 전보자: 항상 최하위
-  let best = h.includes("부장") ? 10 : 999;
-  gp.forEach(c => { const r = gR.find(x => x.code === c); if (r && r.weight < best) best = r.weight; });
-  if (best !== 999) return best;
-  if (f.includes("일반내신") || f.includes("전보")) return 60;
-  if (f.includes("유예")) return 65;
-  return 50;
+// 1단계(학년) 순서 가중치: 숫자가 작을수록 먼저. 부장 희망·우대·교원 구분 중 가장 앞서는 값
+function gradePrio(t, rules, c){
+  c = c || cfg();
+  const gR = (rules && rules.gradeRules) || [], S = statusOf(t, c);
+  let w = S && S.w1 != null ? Number(S.w1) : Number(c.stage1.defaultWeight);
+  if (S && S.excludeGrade) return w;   // 학년에서 제외되는 구분은 부장 희망·우대의 영향을 받지 않음
+  if (isHead(t)) w = Math.min(w, Number(c.stage1.headWeight));
+  (t.gradePriorities || []).forEach(code => { const r = gR.find(x => x.code === code); if (r) w = Math.min(w, Number(r.weight)); });
+  return w;
 }
-function dutyPrio(t, rules, policy){
-  const h = (t.headHope || "").trim(), f = (t.transferF || "").trim(), g = (t.grade || "").trim(), dp = t.dutyPriorities || [];
-  const dR = (rules && rules.dutyRules) || DEFAULT_RULES.dutyRules;
-  if (h.includes("부장")) return 5;
-  if (f.includes("만기")) return 95;  // 만기 전보자: 항상 최하위
-  let best = 999;
-  dp.forEach(c => { const r = dR.find(x => x.code === c); if (r && r.weight < best) best = r.weight; });
-  if (best !== 999) return best;
-  if (f.includes("일반내신") || f.includes("전보") || f.includes("타시도")) return 60;
-  if (f.includes("유예")) return 55;
-  if (f.includes("복직")) return 50;
-  if (g === "5학년") return 30;
-  if (["2학년","3학년","4학년"].includes(g)) return 40;
-  return 45;
+// 2단계(업무) 순서 가중치: 부장 → 우대 → 교원 구분 → 1단계에서 고른 학년대 → 기본
+function dutyPrio(t, rules, c){
+  c = c || cfg();
+  const dR = (rules && rules.dutyRules) || [], S = statusOf(t, c), g = (t.grade || "").trim();
+  let w = S && S.w2 != null ? Number(S.w2) : (c.stage2.gradeWeights[g] != null ? Number(c.stage2.gradeWeights[g]) : Number(c.stage2.defaultWeight));
+  if (S && S.excludeDuty) return w;    // 업무에서 제외되는 구분도 마찬가지
+  if (isHead(t)) w = Math.min(w, Number(c.stage2.headWeight));
+  (t.dutyPriorities || []).forEach(code => { const r = dR.find(x => x.code === code); if (r) w = Math.min(w, Number(r.weight)); });
+  return w;
 }
-// 0: 본교에 남는 교사 / 1: 일반전보내신 / 2: 1년 휴직 / 3: 만기 전보자
-const tier = t => { const f = t.transferF || ""; return f.includes("만기") ? 3 : f.includes("1년휴직") ? 2 : f.includes("일반내신") ? 1 : 0; };
-function sortTeachers(list, type, rulesObj, policy){
+// 인사담당자의 '순서 조정'(adj): 같은 순위 묶음 안에서 |adj|칸 위(+)/아래(-)로 이동
+function applyShifts(sorted, c){
+  const out = [...sorted];
+  out.filter(t => t.adj).map(t => t.name).forEach(nm => {
+    const i = out.findIndex(t => t.name === nm), t = out[i], tr = tierOf(t, c);
+    let lo = i, hi = i;
+    while (lo > 0 && tierOf(out[lo - 1], c) === tr) lo--;
+    while (hi < out.length - 1 && tierOf(out[hi + 1], c) === tr) hi++;
+    const j = Math.max(lo, Math.min(hi, i - t.adj));
+    out.splice(i, 1); out.splice(j, 0, t);
+  });
+  return out;
+}
+function sortTeachers(list, type, rulesObj, policy, cfgObj){
+  const c = cfgObj || cfg();
   const rules = rulesObj || (state && state.priorityRules) || DEFAULT_RULES;
-  const pol = policy || curPolicy();
   const fn = type === "GRADE" ? gradePrio : dutyPrio;
-  return list.sort((a, b) => {
-    const ta = tier(a), tb = tier(b);
-    if (ta !== tb) return ta - tb;   // 재직 교사 → 일반내신 → 만기 순 (우대·점수보다 우선)
-    const pa = fn(a, rules, pol), pb = fn(b, rules, pol);
+  const tb = c.tieBreakers;
+  const sorted = list.sort((a, b) => {
+    const ta = tierOf(a, c), tb2 = tierOf(b, c);
+    if (ta !== tb2) return ta - tb2;   // 순위 묶음(재직 교사 → 일반내신 → 휴직 → 만기 등)이 우대·점수보다 우선
+    const pa = fn(a, rules, c), pb = fn(b, rules, c);
     if (pa !== pb) return pa - pb;
-    const d = (x, y) => (parseFloat(y) || 0) - (parseFloat(x) || 0);
-    return d(a.score, b.score) || d(a.schoolCar, b.schoolCar) || d(a.totalCar, b.totalCar);
-  }).map((t, i) => ({...t, rank: i + 1}));
+    for (const k of tb) {
+      const x = parseFloat(a[k.f]) || 0, y = parseFloat(b[k.f]) || 0;
+      if (x !== y) return k.dir === "asc" ? x - y : y - x;
+    }
+    return 0;
+  });
+  return applyShifts(sorted, c).map((t, i) => ({...t, rank: i + 1}));
 }
 function nextTurn(teachers, stage, from){
   for (let i = from; i < teachers.length; i++) {
@@ -721,76 +1146,31 @@ function nextTurn(teachers, stage, from){
   return teachers.length;
 }
 
-/* ---------- 단계 제어 ---------- */
-function setStage0(){ db.ref("baegotDraft/stage").set(0); alert("📝 0단계(점수 입력·우대 체크)가 열렸습니다."); }
-function startStage1(){
-  if (!state || !state.teachers || !state.teachers.length) return alert("등록된 교원이 없습니다.");
-  if (!state.priorityConfirmed) return alert("⚠️ 먼저 '배정우대 최종 확인'을 체크해 주세요.");
-  let s = sortTeachers([...state.teachers], "GRADE").map(t => {
-    const h = (t.headHope || "").trim();
-    if (t.transferF === "만기") return {...t, grade:"해당없음(만기)", duty:"해당없음(만기)"};  // 만기 전보자: 학년·업무 모두 제외
-    if (t.transferF === "1년휴직") return {...t, grade:"해당없음(휴직)", duty:"해당없음(휴직)"};  // 1년 휴직: 학년·업무 모두 제외
-    if (!h.includes("부장")) return t;
-    const m = h.match(/([1-6])학년/);
-    return {...t, grade: m ? m[1] + "학년" : (t.grade || ""), duty: "해당없음"};
-  });
-  backupNow("1단계 시작 전"); log("1단계 시작");
-  db.ref("baegotDraft").update({stage:1, teachers:s, currentTurn:nextTurn(s, 1, 0)});
-  alert("✅ 1단계 학년 선택이 시작되었습니다.");
-}
-function startStage2(){
-  if (!state || !state.teachers) return alert("교원 명단이 없습니다.");
-  if (!state.priorityConfirmed) return alert("⚠️ 배정우대 확인 체크가 해제되어 있습니다.");
-  const noGrade = state.teachers.filter(t => !t.grade).map(t => t.name);
-  if (noGrade.length && !confirm(`아직 학년을 고르지 않은 교사가 있습니다 (${noGrade.join(", ")}).\n학년이 없으면 업무를 선택할 수 없습니다. 그래도 시작할까요?`)) return;
-  let s = sortTeachers([...state.teachers], "DUTY").map(t => (t.headHope || "").includes("부장") ? {...t, duty:"해당없음"} : (t.transferF === "만기" ? {...t, duty:"해당없음(만기)"} : t.transferF === "1년휴직" ? {...t, duty:"해당없음(휴직)"} : t));
-  backupNow("2단계 시작 전"); log("2단계 시작");
-  db.ref("baegotDraft").update({stage:2, teachers:s, currentTurn:nextTurn(s, 2, 0)});
-  alert("✅ 2단계 업무 선택이 시작되었습니다. (제28조 7항 순서)");
-}
-function forceSkipTurn(){ if (state) db.ref("baegotDraft/currentTurn").set(nextTurn(state.teachers, state.stage, state.currentTurn + 1)); }
+function forceSkipTurn(){ if (state) R("draft/currentTurn").set(nextTurn(state.teachers, state.stage, state.currentTurn + 1)); }
 function undoLastTurn(){
   if (!state || state.currentTurn <= 0) return;
   const p = state.currentTurn - 1, u = {};
-  if (state.stage === 1) u[`baegotDraft/teachers/${p}/grade`] = "";
-  if (state.stage === 2) u[`baegotDraft/teachers/${p}/duty`] = "";
-  u["baegotDraft/currentTurn"] = p;
+  if (state.stage === 1) u[`draft/teachers/${p}/grade`] = "";
+  if (state.stage === 2) u[`draft/teachers/${p}/duty`] = "";
+  u["draft/currentTurn"] = p;
   log(`[관리자] 직전 선택 취소: ${state.teachers[p].name}`);
-  db.ref().update(u);
+  R().update(u);
 }
 function clearAllData(){
-  if (!confirm("모든 명단을 초기화할까요? (정원·업무·우대규칙 설정은 유지됩니다)")) return;
+  if (!confirm("모든 명단을 초기화할까요? (정원·업무·우대규칙·규정 설정은 유지됩니다)")) return;
   backupNow("명단 초기화 전"); log("명단 초기화");
-  db.ref("baegotDraft").update({stage:0, currentTurn:0, priorityConfirmed:false, teachers:[]});
+  R("draft").update({stage:0, currentTurn:0, priorityConfirmed:false, teachers:null});
 }
 function loadSampleData(){
-  const s = [
-    {name:"김건",score:10,schoolCar:2,totalCar:7.08,transferF:"X",gradePriorities:[],dutyPriorities:[],headHope:"정보부장",grade:"",duty:"해당없음"},
-    {name:"유지훈",score:11,schoolCar:4,totalCar:6.08,transferF:"X",gradePriorities:[],dutyPriorities:[],headHope:"5학년부장",grade:"5학년",duty:"해당없음"},
-    {name:"정미경",score:12,schoolCar:3,totalCar:32.06,transferF:"X",gradePriorities:["우대2"],dutyPriorities:["업무1"],headHope:"X",grade:"",duty:""},
-    {name:"임진아",score:3,schoolCar:1,totalCar:33.08,transferF:"X",gradePriorities:["우대2"],dutyPriorities:["업무1"],headHope:"X",grade:"",duty:""},
-    {name:"지인욱",score:6,schoolCar:3,totalCar:26.10,transferF:"X",gradePriorities:["우대3"],dutyPriorities:["업무1"],headHope:"X",grade:"",duty:""},
-    {name:"이진림",score:4,schoolCar:2,totalCar:27.06,transferF:"X",gradePriorities:["우대4"],dutyPriorities:[],headHope:"X",grade:"",duty:""},
-    {name:"(복직)손병훈",score:6,schoolCar:2,totalCar:13.11,transferF:"복직",gradePriorities:[],dutyPriorities:[],headHope:"X",grade:"",duty:""},
-    {name:"(복직)이혜민",score:6.7,schoolCar:1.07,totalCar:13.11,transferF:"복직",gradePriorities:[],dutyPriorities:["업무2"],headHope:"X",grade:"",duty:""}
-  ];
-  db.ref("baegotDraft").set({
-    stage:0, currentTurn:0, priorityConfirmed:false, naesinPolicy:"LAST",
-    gradeLimits:DEFAULT_GRADE_LIMITS, duties:DEFAULT_DUTIES, priorityRules:DEFAULT_RULES,
-    teachers: sortTeachers(s, "GRADE", DEFAULT_RULES, "LAST")
-  });
+  if (!confirm("테스트용 가상 교원 명단(8명)으로 현재 명단을 바꿉니다.\n실제 명단이 있다면 먼저 백업하세요. 계속할까요?")) return;
+  backupNow("샘플 명단 불러오기 전");
+  const mk = (name, score, sc, tot, f, h) => ({name, score, schoolCar:sc, totalCar:tot, transferF:f, gradePriorities:[], dutyPriorities:[], headHope:h, grade:"", duty:""});
+  const t = [mk("가상교사1",10,2,7.08,"X","교무부장"), mk("가상교사2",11,4,6.08,"X","5학년부장"), mk("가상교사3",12,3,32.06,"X","X"), mk("가상교사4",3,1,33.08,"X","X"),
+             mk("가상교사5",6,3,26.1,"X","X"), mk("가상교사6",6.7,1.07,13.11,"복직","X"), mk("가상교사7",9,2,10,"일반내신","X"), mk("가상교사8",8,5,12,"만기","X")];
+  R("draft").update({stage:0, currentTurn:0, priorityConfirmed:false, teachers:clone(sortTeachers(t, "GRADE"))});
 }
 
 /* ---------- 선택 처리 (확인창 → 확정) ---------- */
-function askConfirm(html){
-  return new Promise(res => {
-    const m = document.getElementById("modal"), yes = document.getElementById("m-yes"), no = document.getElementById("m-no");
-    document.getElementById("m-body").innerHTML = html;
-    m.classList.add("on");
-    const done = v => { m.classList.remove("on"); yes.onclick = no.onclick = null; res(v); };
-    yes.onclick = () => done(true); no.onclick = () => done(false);
-  });
-}
 const note = "<small>'예, 확정'을 누르면 다음 선생님 차례로 넘어가며, 이후 변경은 관리자에게 요청해야 합니다.</small>";
 function chooseGrade(g){
   const idx = state.currentTurn, t0 = state.teachers[idx]; if (!t0) return;
@@ -803,7 +1183,7 @@ function chooseGrade(g){
     if (t.filter(x => x.grade === g).length >= lim) return alert("그 사이 정원이 마감되었습니다. 다시 선택해 주세요.");
     t[idx] = {...t[idx], grade:g};
     log(`${nm} → 학년 ${g}`);
-    db.ref("baegotDraft").update({teachers:t, currentTurn:nextTurn(t, 1, idx + 1)});
+    R("draft").update({teachers:t, currentTurn:nextTurn(t, 1, idx + 1)});
   });
 }
 function chooseDuty(name){
@@ -811,6 +1191,8 @@ function chooseDuty(name){
   const nm = t0.name;
   const d0 = getDuties().find(x => x.name === name);
   if (!d0 || !d0.grades.includes(groupOf(t0.grade))) return alert("이 업무는 선택한 학년에서는 고를 수 없습니다.");
+  const fz = forcedDuties(state.teachers, idx);
+  if (fz.length && !fz.includes(name)) return alert(`선생님은 ${fz.join(", ")} 업무를 맡아야 합니다. (대상 학년에서 남은 마지막 선생님입니다)`);
   askConfirm(`<b>${esc(nm)}</b> 선생님!<br><span class="pick">${esc(name)}</span><br>업무를 선택하셨습니다. 확실한가요?${note}`).then(ok => {
     if (!ok) return;
     const t = [...state.teachers];
@@ -818,7 +1200,7 @@ function chooseDuty(name){
     if (t.some(x => x.duty === name)) return alert("그 사이 다른 선생님이 선택한 업무입니다. 다시 선택해 주세요.");
     t[idx] = {...t[idx], duty:name};
     log(`${nm} → 업무 ${name}`);
-    db.ref("baegotDraft").update({teachers:t, currentTurn:nextTurn(t, 2, idx + 1)});
+    R("draft").update({teachers:t, currentTurn:nextTurn(t, 2, idx + 1)});
   });
 }
 
@@ -826,13 +1208,14 @@ function chooseDuty(name){
 function render(){
   if (!state) return;
   const teachers = state.teachers || [];
-  document.getElementById("input-sec").style.display = state.stage === 0 ? "block" : "none";
+  $("input-sec").style.display = (state.stage === 0 && (isAdmin || cfg().access.selfInput)) || (isAdmin && state.stage > 0) ? "block" : "none";
+  $("in-consent-wrap").style.display = isAdmin ? "none" : "block";
 
   const sel = document.getElementById("user-select"), prev = myName || sel.value;
   sel.innerHTML = `<option value="">-- 본인 성함 선택 --</option>`;
   teachers.forEach(t => {
     const o = document.createElement("option");
-    o.value = t.name; o.textContent = `${t.rank}순위 ${t.name} (${t.score}점)`;
+    o.value = t.name; o.textContent = `${t.rank}순위 ${t.name}${canSee(t) ? ` (${t.score}점)` : ""}`;
     if (t.name === prev) o.selected = true;
     sel.appendChild(o);
   });
@@ -868,10 +1251,13 @@ function render(){
   const inDuty = state.stage === 2 && active;
   const info = document.getElementById("duty-info");
   const duties = getDuties();
+  const forced = inDuty ? forcedDuties(teachers, state.currentTurn) : [];
   if (inDuty && !grp) info.textContent = `⚠️ ${active.name} 선생님은 1단계에서 학년을 선택하지 않아 업무를 고를 수 없습니다. 관리자에게 문의하세요.`;
   else if (inDuty) {
     const n = duties.filter(d => d.grades.includes(grp) && !teachers.some(t => t.duty === d.name)).length;
-    info.innerHTML = `현재 차례: <b>${esc(active.name)}</b> (${esc(active.grade)}) → 선택 가능한 업무 <b>${n}개</b>`;
+    info.innerHTML = forced.length
+      ? `⚠️ <b>${esc(active.name)}</b> 선생님은 ${esc(active.grade)}에서 남은 마지막 선생님이라 <b>${esc(forced.join(", "))}</b> 업무를 맡아야 합니다.`
+      : `현재 차례: <b>${esc(active.name)}</b> (${esc(active.grade)}) → 선택 가능한 업무 <b>${n}개</b>`;
   } else info.textContent = "업무 버튼의 작은 글씨는 선택할 수 있는 학년입니다.";
 
   const onlyMine = document.getElementById("only-mine").checked && inDuty && grp;
@@ -881,8 +1267,8 @@ function render(){
     if (onlyMine && !allowed) return;
     const b = document.createElement("button");
     b.className = "ch" + (d.name.startsWith("(전담)") ? " jd" : "") + (inDuty && !allowed ? " off" : "");
-    b.innerHTML = `${esc(d.name)}<small>${taken ? "❌ " + esc(taken.name) : "⭕ " + esc(gradeLabel(d.grades))}</small>`;
-    b.disabled = !(isMy && state.stage === 2 && !taken && allowed);
+    b.innerHTML = `${esc(d.name)}<small>${taken ? "❌ " + esc(taken.name) : "⭕ " + esc(gradeLabel(d.grades)) + (d.must ? " · ⭐필수" : "")}</small>`;
+    b.disabled = !(isMy && state.stage === 2 && !taken && allowed && (!forced.length || forced.includes(d.name)));
     b.onclick = () => chooseDuty(d.name);
     db2.appendChild(b);
   });
@@ -901,13 +1287,13 @@ function render(){
     const gb2 = (t.gradePriorities || []).map(c => `<span class="bg">${esc(c)}</span>`).join("") || "-";
     const db3 = (t.dutyPriorities || []).map(c => `<span class="bg bd">${esc(c)}</span>`).join("") || "-";
     const tr = document.createElement("tr"); tr.className = cls;
-    tr.innerHTML = `<td><b>${t.rank}</b></td><td><b>${esc(t.name)}</b></td><td>${t.score}</td><td>${t.schoolCar}</td><td>${t.totalCar}</td><td>${esc(t.transferF || "X")}</td><td>${gb2}</td><td>${db3}</td><td>${esc(t.headHope || "X")}</td>` +
+    tr.innerHTML = `<td><b>${t.rank}</b></td><td><b>${esc(t.name)}</b></td><td>${canSee(t) ? t.score : "🔒"}</td><td>${canSee(t) ? t.schoolCar : "🔒"}</td><td>${canSee(t) ? t.totalCar : "🔒"}</td><td>${esc(t.transferF || "X")}</td><td>${gb2}</td><td>${db3}</td><td>${esc(t.headHope || "X")}</td>` +
       `<td style="color:#1e3fae;font-weight:700">${esc(t.grade || "-")}</td><td style="color:#5a2fd0;font-weight:700">${esc(t.duty || "-")}</td><td>${stt}</td>`;
     tb.appendChild(tr);
     const tags = [t.transferF && t.transferF !== "X" ? t.transferF : "", t.headHope && t.headHope !== "X" ? t.headHope : "", ...(t.gradePriorities || []), ...(t.dutyPriorities || [])]
       .filter(Boolean).map(x => `<span class="tg">${esc(x)}</span>`).join("");
     mc += `<div class="mc ${cls}"><div class="mr">${t.rank}</div><div class="mb"><div class="mn"><b>${esc(t.name)}</b>${tags}<span class="ms">${stt}</span></div>` +
-      `<div class="mm">${t.score}점 · 본교 ${t.schoolCar} · 총 ${t.totalCar}</div>` +
+      `<div class="mm">${canSee(t) ? `${t.score}점 · 본교 ${t.schoolCar} · 총 ${t.totalCar}` : "점수 비공개"}</div>` +
       `<div class="ma"><span class="${t.grade ? "c1" : "c0"}">${esc(t.grade || "학년 -")}</span><span class="${t.duty ? "c2" : "c0"}">${esc(t.duty || "업무 -")}</span></div></div></div>`;
   });
   document.getElementById("roster-m").innerHTML = mc;
@@ -931,25 +1317,6 @@ function setView(v){
   ["rank","grade","duty"].forEach(k => document.getElementById("v-" + k).classList.toggle("hide", k !== v));
   document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.v === v));
 }
-const log = m => db.ref("baegotLog").push({t:Date.now(), m});
-const fmt = t => new Date(t).toLocaleString("ko-KR", {month:"numeric", day:"numeric", hour:"2-digit", minute:"2-digit", second:"2-digit"});
-db.ref("baegotLog").limitToLast(40).on("value", sn => {
-  const a = []; sn.forEach(c => { a.unshift(c.val()); });
-  document.getElementById("log-list").innerHTML = a.map(x => `<div>${fmt(x.t)} · ${esc(x.m)}</div>`).join("") || "기록 없음";
-});
-function backupNow(label){ return state ? db.ref("baegotBackups").push({t:Date.now(), label, data:state}) : Promise.resolve(); }
-db.ref("baegotBackups").limitToLast(12).on("value", sn => {
-  const a = []; sn.forEach(c => { a.unshift({k:c.key, ...c.val()}); });
-  document.getElementById("backup-list").innerHTML = a.map(x => `<div class="tag"><span>${fmt(x.t)} ${esc(x.label)}</span><button data-k="${x.k}" onclick="restoreBackup(this.dataset.k)">복원</button></div>`).join("") || "백업 없음";
-});
-function restoreBackup(k){
-  if (!confirm("이 백업 시점으로 전체 데이터를 되돌릴까요?\n(되돌리기 직전 상태는 자동 백업됩니다)")) return;
-  backupNow("복원 직전 자동").then(() => db.ref("baegotBackups/" + k).once("value")).then(sn => {
-    const v = sn.val(); if (!v) return alert("백업을 찾을 수 없습니다.");
-    log(`[관리자] 백업 복원: ${fmt(v.t)} ${v.label}`);
-    return db.ref("baegotDraft").set(v.data);
-  });
-}
 function downloadJSON(){
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([JSON.stringify(state, null, 1)], {type:"application/json"}));
@@ -961,12 +1328,12 @@ function resortNow(){
   backupNow("재정렬 전");
   const mode = state.stage === 2 ? "DUTY" : "GRADE", sl = sortTeachers([...state.teachers], mode), up = {teachers: sl};
   if (state.stage > 0) up.currentTurn = nextTurn(sl, state.stage, 0);
-  log("[관리자] 순위 재정렬"); db.ref("baegotDraft").update(up);
+  log("[관리자] 순위 재정렬"); R("draft").update(up);
 }
 function renderFix(){
   const b = document.getElementById("fix-body");
   if (!b || !state || document.getElementById("admin").style.display !== "block") return;
-  const gl = Object.keys(state.gradeLimits || DEFAULT_GRADE_LIMITS), dl = [...getDuties().map(d => d.name), "해당없음", "해당없음(만기)"];
+  const gl = Object.keys(state.gradeLimits || DEFAULT_GRADE_LIMITS), dl = [...getDuties().map(d => d.name), "해당없음", ...new Set(cfg().statuses.map(x => x.excludedLabel).filter(Boolean)), "해당없음(업무 없음)"];
   const opts = (list, cur) => { const l = [...list]; if (cur && !l.includes(cur)) l.push(cur); return `<option value="">(비움)</option>` + l.map(x => `<option value="${esc(x)}" ${x === cur ? "selected" : ""}>${esc(x)}</option>`).join(""); };
   b.innerHTML = (state.teachers || []).map((t, i) =>
     `<tr><td>${t.rank}</td><td><b>${esc(t.name)}</b></td>` +
@@ -982,14 +1349,14 @@ function fixAssign(i, f, v){
   backupNow("관리자 수정 전");
   t[i] = {...t[i], [f]: v};
   log(`[관리자] ${nm} ${lb} → ${v || "비움"}`);
-  db.ref("baegotDraft/teachers").set(t);
+  R("draft/teachers").set(t);
 }
 function setTurn(i){
   if (!state || state.stage === 0) return alert("1·2단계 진행 중에만 사용할 수 있습니다.");
   const t = state.teachers[i];
   if (!confirm(`${t.name} 선생님에게 선택 차례를 줄까요?\n(이미 선택한 값이 있으면 먼저 [비움]으로 바꿔 주세요)`)) return;
   log(`[관리자] 차례 지정: ${t.name}`);
-  db.ref("baegotDraft/currentTurn").set(i);
+  R("draft/currentTurn").set(i);
 }
 
 function exportCSV(){
@@ -1000,9 +1367,737 @@ function exportCSV(){
   });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([csv], {type:"text/csv;charset=utf-8;"}));
-  a.download = "배곧초_솔로몬_배정결과.csv";
+  a.download = (META ? META.name : "학교") + "_솔로몬_배정결과.csv";
   a.click();
 }
+
+/* =====================================================================
+   v3 추가 모듈: 암호 처리 / 확인·입력창 / 기록·백업·삭제 / 제작자 콘솔 / 학교 입장
+   / 규정 마법사 / 보안·개인정보 / 교원 세부 조정
+   ===================================================================== */
+
+/* ---------- 암호 처리 (브라우저 내장 Web Crypto) ---------- */
+const te = new TextEncoder();
+const b64 = buf => { let s = ""; new Uint8Array(buf).forEach(x => s += String.fromCharCode(x)); return btoa(s); };
+const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const rndSalt = () => b64(crypto.getRandomValues(new Uint8Array(16)));
+async function pbkdf2Bits(pw, saltB64){
+  const k = await crypto.subtle.importKey("raw", te.encode(pw), "PBKDF2", false, ["deriveBits"]);
+  return b64(await crypto.subtle.deriveBits({name:"PBKDF2", salt:unb64(saltB64), iterations:120000, hash:"SHA-256"}, k, 256));
+}
+async function sha256hex(s){
+  const d = new Uint8Array(await crypto.subtle.digest("SHA-256", te.encode(s)));
+  return [...d].map(x => x.toString(16).padStart(2, "0")).join("");
+}
+async function aesKey(pw, saltB64){
+  const k = await crypto.subtle.importKey("raw", te.encode(pw), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey({name:"PBKDF2", salt:unb64(saltB64), iterations:200000, hash:"SHA-256"}, k, {name:"AES-GCM", length:256}, false, ["encrypt", "decrypt"]);
+}
+async function encJSON(obj, pw, saltB64){
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({name:"AES-GCM", iv}, await aesKey(pw, saltB64), te.encode(JSON.stringify(obj)));
+  return {iv:b64(iv), ct:b64(ct)};
+}
+async function decJSON(box, pw, saltB64){
+  const pt = await crypto.subtle.decrypt({name:"AES-GCM", iv:unb64(box.iv)}, await aesKey(pw, saltB64), unb64(box.ct));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+function randFrom(alpha, n){
+  const a = crypto.getRandomValues(new Uint32Array(n));
+  return [...a].map(x => alpha[x % alpha.length]).join("");
+}
+const genCode = () => randFrom("abcdefghjkmnpqrstuvwxyz23456789", 8);
+const genPw = () => randFrom("abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", 10);
+
+/* ---------- 확인창 / 입력창 ---------- */
+function askConfirm(html, o){
+  o = o || {};
+  return new Promise(res => {
+    const m = $("modal"), yes = $("m-yes"), no = $("m-no");
+    $("m-body").innerHTML = html;
+    yes.textContent = o.yes || "예, 확정"; no.textContent = o.no || "다시 선택";
+    m.classList.add("on");
+    const done = v => { m.classList.remove("on"); yes.onclick = no.onclick = null; res(v); };
+    yes.onclick = () => done(true); no.onclick = () => done(false);
+  });
+}
+function askPrompt(title, o){
+  o = o || {};
+  return new Promise(res => {
+    const m = $("modal"), yes = $("m-yes"), no = $("m-no");
+    $("m-body").innerHTML = `<div style="font-weight:700;margin-bottom:10px">${title}</div>` +
+      `<input id="m-in" class="inp" style="width:100%;text-align:center" type="${o.password ? "password" : "text"}" ${o.numeric ? 'inputmode="numeric"' : ""} autocomplete="off" placeholder="${esc(o.ph || "")}">`;
+    yes.textContent = o.yes || "확인"; no.textContent = o.no || "취소";
+    m.classList.add("on");
+    const inp = $("m-in"); setTimeout(() => inp.focus(), 60);
+    const done = v => { m.classList.remove("on"); yes.onclick = no.onclick = null; inp.onkeydown = null; res(v); };
+    yes.onclick = () => done(inp.value); no.onclick = () => done(null);
+    inp.onkeydown = e => { if (e.key === "Enter") done(inp.value); };
+  });
+}
+function csvDownload(rows, filename){
+  const body = rows.map(r => r.map(x => `"${String(x == null ? "" : x).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["﻿" + body], {type:"text/csv;charset=utf-8;"}));
+  a.download = filename; a.click();
+}
+function fileDownload(text, filename, type){
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], {type:type || "application/json"}));
+  a.download = filename; a.click();
+}
+async function copyText(s){
+  try { await navigator.clipboard.writeText(s); return true; } catch(e) { prompt("아래 내용을 복사하세요 (Ctrl+C)", s); return false; }
+}
+
+/* ---------- 기록 · 백업 · 보관기간 · 삭제 ---------- */
+const log = m => SID ? R("log").push({t:Date.now(), m}) : Promise.resolve();
+const fmt = t => new Date(t).toLocaleString("ko-KR", {month:"numeric", day:"numeric", hour:"2-digit", minute:"2-digit", second:"2-digit"});
+function attachLogs(){
+  const lq = R("log").limitToLast(40), bq = R("backups").limitToLast(12);
+  lq.on("value", sn => {
+    const a = []; sn.forEach(c => { a.unshift(c.val()); });
+    $("log-list").innerHTML = a.map(x => `<div>${fmt(x.t)} · ${esc(x.m)}</div>`).join("") || "기록 없음";
+  });
+  bq.on("value", sn => {
+    const a = []; sn.forEach(c => { a.unshift({k:c.key, ...c.val()}); });
+    $("backup-list").innerHTML = a.map(x => `<div class="tag"><span>${fmt(x.t)} ${esc(x.label)}</span><button data-k="${x.k}" onclick="restoreBackup(this.dataset.k)">복원</button></div>`).join("") || "백업 없음";
+  });
+  OFFS.push(() => lq.off("value"), () => bq.off("value"));
+}
+function backupNow(label){ return state ? R("backups").push({t:Date.now(), label, data:clone(state)}) : Promise.resolve(); }
+function restoreBackup(k){
+  if (!confirm("이 백업 시점으로 전체 데이터를 되돌릴까요?\n(되돌리기 직전 상태는 자동 백업됩니다)")) return;
+  backupNow("복원 직전 자동").then(() => R("backups/" + k).once("value")).then(sn => {
+    const v = sn.val(); if (!v) return alert("백업을 찾을 수 없습니다.");
+    log(`[관리자] 백업 복원: ${fmt(v.t)} ${v.label}`);
+    return R("draft").set(v.data);
+  });
+}
+async function purgeOld(){
+  const d = Number(cfg().retentionDays); if (!d || d < 0) return;
+  const cut = Date.now() - d * 864e5;
+  for (const p of ["backups", "log"]) {
+    const sn = await R(p).once("value"), up = {};
+    sn.forEach(c => { const v = c.val(); if (v && v.t < cut) up[c.key] = null; });
+    if (Object.keys(up).length) await R(p).update(up);
+  }
+}
+async function purgeAll(){
+  const v = await askPrompt("⚠️ 이 학교의 교원 명단·백업·변경 기록을 모두 삭제합니다.<br>되돌릴 수 없습니다. 계속하려면 <b>삭제</b>를 입력하세요.", {yes:"삭제 실행"});
+  if (v !== "삭제") return;
+  await R("backups").remove(); await R("log").remove();
+  await R("draft").update({teachers:null, stage:0, currentTurn:0, priorityConfirmed:false});
+  await log("[관리자] 개인정보 전체 삭제");
+  alert("교원 명단·백업·기록을 모두 삭제했습니다. (학년·업무 설정과 규정은 유지됩니다)");
+}
+
+/* ---------- 학교 입장 / 나가기 ---------- */
+async function enterSchool(code, asCreator){
+  code = (code || "").trim().toLowerCase();
+  const msg = $("land-msg");
+  if (!/^[a-z0-9]{6,24}$/.test(code)) { msg.textContent = "학교 코드 형식이 올바르지 않아요."; return false; }
+  let m;
+  try { m = (await db.ref("schools/" + code + "/meta").once("value")).val(); }
+  catch(e) { msg.textContent = "연결할 수 없어요. 인터넷 연결과 서버 설정을 확인해 주세요."; return false; }
+  if (!m) { msg.textContent = "등록되지 않은 학교 코드입니다."; return false; }
+  detachAll();
+  SID = code; META = m; isAdmin = !!asCreator; isCreator = !!asCreator; verified.clear(); myName = "";
+  try { localStorage.setItem("solomonSchool", code); } catch(e) {}
+  $("landing").classList.add("hide"); $("creator").classList.add("hide"); $("app").classList.remove("hide");
+  $("admin").style.display = "none"; $("school-title").textContent = m.name + " 학년·업무 배정";
+  setRoleBadge(); fillInputControls(); attachSchool();
+  return true;
+}
+function leaveSchool(){
+  detachAll(); SID = ""; META = null; isAdmin = false; isCreator = false; myName = "";
+  try { localStorage.removeItem("solomonSchool"); } catch(e) {}
+  try { history.replaceState(null, "", location.pathname); } catch(e) {}
+  $("app").classList.add("hide"); $("creator").classList.add("hide"); $("landing").classList.remove("hide");
+  $("land-msg").textContent = "";
+}
+async function enterFromLanding(){ const ok = await enterSchool($("land-code").value); if (ok) { try { history.replaceState(null, "", "?s=" + SID); } catch(e) {} } }
+function showLanding(code){ $("landing").classList.remove("hide"); if (code) $("land-code").value = code; }
+
+/* ---------- 제작자 콘솔 (학교 만들기·비밀번호 발급) ---------- */
+let PLAT = null, CREG = null, CPW = "";
+async function openCreator(){
+  if (!(window.crypto && crypto.subtle)) return alert("이 브라우저에서는 암호 기능을 쓸 수 없습니다. https 주소(또는 최신 크롬)에서 열어 주세요.");
+  let snap;
+  try { snap = await db.ref("platform").once("value"); } catch(e) { return alert("서버에 연결할 수 없습니다. Firebase 규칙·인터넷 연결을 확인하세요."); }
+  PLAT = snap.val();
+  if (!PLAT) {
+    const p1 = await askPrompt("🔧 제작자 비밀번호를 처음 만듭니다.<br><small>8자 이상 · 잊으면 복구할 수 없습니다</small>", {password:true}); if (p1 === null) return;
+    if (p1.length < 8) return alert("8자 이상으로 만들어 주세요.");
+    const p2 = await askPrompt("한 번 더 입력해 주세요.", {password:true}); if (p1 !== p2) return alert("두 번 입력한 비밀번호가 다릅니다.");
+    const salt = rndSalt(), box = await encJSON({schools:[]}, p1, salt);
+    await db.ref("platform").set({salt, ...box, v:1});
+    PLAT = {salt, ...box}; CPW = p1; CREG = {schools:[]};
+  } else {
+    const pw = await askPrompt("🔧 제작자 비밀번호", {password:true}); if (pw === null) return;
+    try { CREG = await decJSON(PLAT, pw, PLAT.salt); CPW = pw; } catch(e) { return alert("비밀번호가 틀렸습니다."); }
+  }
+  $("landing").classList.add("hide"); $("app").classList.add("hide"); $("creator").classList.remove("hide");
+  $("fb-rules").value = FB_RULES;
+  renderCreator();
+}
+function closeCreator(){ CREG = null; CPW = ""; $("creator").classList.add("hide"); $("landing").classList.remove("hide"); }
+async function saveReg(){ const box = await encJSON(CREG, CPW, PLAT.salt); await db.ref("platform").update(box); PLAT = {...PLAT, ...box}; }
+const schoolLink = code => location.origin + location.pathname + "?s=" + code;
+function renderCreator(){
+  const L = CREG.schools || [];
+  $("cs-list").innerHTML = L.map(s => `<div class="cs-item"><div><b>${esc(s.name)}</b> <code>${esc(s.code)}</code><br><small>${new Date(s.createdAt).toLocaleDateString("ko-KR")} · ${esc((TEMPLATES[s.template] || {}).label || s.template)}</small></div>` +
+    `<div class="btns" style="margin:0"><button class="btn sm" onclick="enterAsCreator('${esc(s.code)}')">입장(관리)</button>` +
+    `<button class="btn sm ghost" onclick="copyText(schoolLink('${esc(s.code)}'))">링크 복사</button>` +
+    `<button class="btn sm ghost" onclick="resetSchoolPw('${esc(s.code)}')">비밀번호 재발급</button>` +
+    `<button class="btn sm ghost" onclick="importLegacy('${esc(s.code)}')">기존 배곧초 데이터 가져오기</button>` +
+    `<button class="btn sm" style="background:var(--red)" onclick="deleteSchool('${esc(s.code)}')">삭제</button></div></div>`).join("") || '<div class="note">아직 만든 학교가 없습니다.</div>';
+}
+function showIssued(name, code, pw){
+  const box = $("cs-result"); box.classList.remove("hide");
+  box.innerHTML = `<b>✅ ${esc(name)}</b><br>학교 코드: <code>${esc(code)}</code><br>입장 링크: <code>${esc(schoolLink(code))}</code><br>인사담당자 비밀번호: <code style="font-size:1.05rem">${esc(pw)}</code><br>` +
+    `<small style="color:#c62828">⚠️ 비밀번호는 지금 한 번만 보입니다. 교감선생님께 전달하고, 교감선생님이 [관리자 → 보안·개인정보]에서 바꾸도록 안내하세요. 교사들에게는 <b>입장 링크(또는 코드)만</b> 알려 주세요.</small>`;
+}
+async function createSchool(){
+  const name = $("cs-name").value.trim(); if (!name) return alert("학교 이름을 입력하세요.");
+  const pw = $("cs-pw").value.trim() || genPw();
+  if (pw.length < 6) return alert("비밀번호는 6자 이상으로 해 주세요.");
+  const tp = $("cs-tpl").value, T = TEMPLATES[tp] || TEMPLATES.blank;
+  let code = genCode();
+  while ((await db.ref("schools/" + code + "/meta").once("value")).val()) code = genCode();
+  const salt = rndSalt(), hash = await pbkdf2Bits(pw, salt);
+  await db.ref("schools/" + code).set(clone({
+    meta:{name, salt, hash, createdAt:Date.now(), template:tp, v:3},
+    config:T.cfg,
+    draft:{stage:0, currentTurn:0, priorityConfirmed:false, naesinPolicy:"LAST", gradeLimits:T.gradeLimits, duties:T.duties, priorityRules:T.rules}
+  }));
+  CREG.schools.push({code, name, createdAt:Date.now(), template:tp}); await saveReg();
+  $("cs-name").value = ""; $("cs-pw").value = "";
+  showIssued(name, code, pw); renderCreator();
+}
+async function resetSchoolPw(code){
+  const s = CREG.schools.find(x => x.code === code); if (!s) return;
+  if (!confirm(`[${s.name}] 인사담당자 비밀번호를 새로 발급할까요?\n기존 비밀번호는 즉시 쓸 수 없게 됩니다.`)) return;
+  const pw = genPw(), salt = rndSalt(), hash = await pbkdf2Bits(pw, salt);
+  await db.ref("schools/" + code + "/meta").update({salt, hash});
+  showIssued(s.name, code, pw);
+}
+async function deleteSchool(code){
+  const s = CREG.schools.find(x => x.code === code); if (!s) return;
+  const v = await askPrompt(`⚠️ [${esc(s.name)}]의 모든 데이터(교원 명단·설정·기록)를 삭제합니다.<br>되돌릴 수 없습니다. 학교 이름을 그대로 입력하세요.`, {yes:"삭제 실행"});
+  if (v !== s.name) return;
+  await db.ref("schools/" + code).remove();
+  CREG.schools = CREG.schools.filter(x => x.code !== code); await saveReg(); renderCreator();
+}
+async function enterAsCreator(code){ const ok = await enterSchool(code, true); if (!ok) alert("학교에 입장하지 못했습니다."); }
+async function importLegacy(code){
+  const s = CREG.schools.find(x => x.code === code); if (!s) return;
+  const v = (await db.ref("baegotDraft").once("value")).val();
+  if (!v) return alert("가져올 기존 배곧초 데이터(baegotDraft)가 없습니다.");
+  if (!confirm(`기존 배곧초 앱의 데이터를 [${s.name}]으로 복사합니다.\n· 교원 명단·진행 상태·학년/업무 설정이 덮어씌워집니다.\n· 규정 설정은 '배곧초 규정 템플릿'으로 바뀝니다.\n계속할까요?`)) return;
+  await db.ref("schools/" + code).update(clone({draft:v, config:BAEGOT_CFG, "meta/template":"baegot"}));
+  alert("가져왔습니다. (기존 baegotDraft 데이터는 그대로 남아 있으니, 확인 후 삭제하세요)");
+}
+async function changeCreatorPw(){
+  const p1 = await askPrompt("새 제작자 비밀번호 (8자 이상)", {password:true}); if (p1 === null) return;
+  if (p1.length < 8) return alert("8자 이상으로 만들어 주세요.");
+  const p2 = await askPrompt("한 번 더 입력", {password:true}); if (p1 !== p2) return alert("두 번 입력이 다릅니다.");
+  const salt = rndSalt(); CPW = p1; PLAT.salt = salt;
+  const box = await encJSON(CREG, CPW, salt);
+  await db.ref("platform").update({salt, ...box}); PLAT = {...PLAT, ...box};
+  alert("제작자 비밀번호를 바꿨습니다.");
+}
+function downloadReg(){ fileDownload(JSON.stringify(CREG, null, 1), "솔로몬_학교목록_" + Date.now() + ".json"); alert("학교 코드가 들어 있는 파일입니다. 안전한 곳에만 보관하세요."); }
+const FB_RULES = `{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "platform": { ".read": true, ".write": true },
+    "schools": {
+      ".read": false,
+      "$schoolId": { ".read": true, ".write": true }
+    },
+    "baegotDraft":   { ".read": true, ".write": true },
+    "baegotLog":     { ".read": true, ".write": true },
+    "baegotBackups": { ".read": true, ".write": true }
+  }
+}`;
+
+/* ---------- 규정 마법사: 규정 PDF 읽기 · 조항 찾기 ---------- */
+let WZ = null, REGTXT = "", REGTAG = "";
+const REG_TAGS = {
+  "순위·우대":/우대|우선|순위|순서/, "점수":/점수|가산|감산|배점/, "동점":/동점|경력/,
+  "휴직·내신":/휴직|복직|유예|내신|전보|만기/, "부장·보직":/부장|보직/, "업무":/업무|담당/, "학년·전담":/학년|전담|담임/
+};
+function loadScript(src){
+  return new Promise((ok, ng) => { const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = () => ng(new Error("스크립트를 불러오지 못했습니다")); document.head.appendChild(s); });
+}
+async function loadRegPdf(file){
+  if (!file) return;
+  const st = $("reg-status");
+  if (file.size > 25 * 1024 * 1024) { st.textContent = "25MB 이하의 PDF만 읽을 수 있어요."; return; }
+  st.textContent = "PDF를 읽는 중…";
+  try {
+    if (!window.pdfjsLib) {
+      await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js");
+      pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    }
+    const doc = await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;
+    const out = [], n = Math.min(doc.numPages, 200);
+    for (let p = 1; p <= n; p++) {
+      const tc = await (await doc.getPage(p)).getTextContent();
+      let line = "", lastY = null;
+      tc.items.forEach(it => {
+        const y = it.transform ? it.transform[5] : 0;
+        if (lastY !== null && Math.abs(y - lastY) > 2) { out.push(line); line = ""; }
+        line += it.str; lastY = y;
+      });
+      out.push(line); out.push("");
+    }
+    const text = out.join("\n").replace(/[ \t]+/g, " ").trim();
+    if (text.replace(/\s/g, "").length < 50) { st.innerHTML = "⚠️ 글자를 거의 읽지 못했습니다. 스캔(그림) 형태의 PDF일 수 있어요. 아래 칸에 내용을 직접 붙여넣거나, PDF를 AI(Claude 등)에 첨부해 해석을 맡겨 주세요."; return; }
+    $("reg-text").value = text; onRegText();
+    st.textContent = `✅ ${file.name} — ${n}쪽, ${text.length.toLocaleString()}자를 읽었습니다.`;
+  } catch(e) {
+    st.textContent = "⚠️ PDF를 읽지 못했습니다(" + (e.message || e) + "). 인터넷 연결을 확인하거나, 규정 내용을 아래 칸에 붙여넣어 주세요.";
+  }
+}
+function onRegText(){ REGTXT = $("reg-text").value; renderRegTags(); renderRegHits(); }
+function renderRegTags(){
+  $("reg-tags").innerHTML = ['<button class="chk' + (REGTAG === "" ? " on" : "") + '" onclick="setRegTag(\'\')">전체</button>']
+    .concat(Object.keys(REG_TAGS).map(k => `<button class="chk${REGTAG === k ? " on" : ""}" onclick="setRegTag('${k}')">${k}</button>`)).join("");
+}
+function setRegTag(k){ REGTAG = k; renderRegTags(); renderRegHits(); }
+// 규정 글에서 '제N조' 제목과 관련 키워드가 든 줄을 찾아 보여 줌 (참고용 — 해석은 사람이 확인)
+function scanReg(text, tag, q){
+  const lines = text.split(/\n/), hits = []; let art = "";
+  const keyRe = tag ? REG_TAGS[tag] : new RegExp(Object.values(REG_TAGS).map(r => r.source).join("|"));
+  for (let i = 0; i < lines.length; i++) {
+    const ln = lines[i].trim(); if (!ln) continue;
+    const a = ln.match(/^제\s*(\d+)\s*조\s*(\([^)]*\))?/);
+    if (a) art = a[0].replace(/\s+/g, "");
+    if (q ? ln.includes(q) : keyRe.test(ln)) hits.push({art, ln, i});
+    if (hits.length >= 120) break;
+  }
+  return hits;
+}
+function renderRegHits(){
+  const box = $("reg-hits"), q = $("reg-q").value.trim();
+  if (!REGTXT.trim()) { box.innerHTML = '<div class="note">규정 PDF를 올리거나 내용을 붙여넣으면 관련 조항을 찾아 보여 줍니다.</div>'; return; }
+  const hits = scanReg(REGTXT, REGTAG, q);
+  box.innerHTML = (hits.length ? hits.map(h => `<div>${h.art ? `<b class="art">${esc(h.art)}</b> ` : ""}${esc(h.ln.length > 160 ? h.ln.slice(0, 160) + "…" : h.ln)}</div>`).join("") : "<div>찾은 내용이 없습니다.</div>") +
+    (hits.length >= 120 ? '<div class="note">120건까지만 표시합니다. 분류를 고르거나 검색어를 넣어 좁혀 보세요.</div>' : "");
+}
+
+/* ---------- 규정 마법사: 설정 양식 ---------- */
+const TB_FIELDS = {score:"점수", schoolCar:"본교 경력", totalCar:"교육 총경력"};
+const numOrNull = v => (v == null || String(v).trim() === "") ? null : Number(v);
+const splitList = s => String(s || "").split(/[\n,]/).map(x => x.trim()).filter(Boolean);
+function parseKV(s){
+  const o = {}; String(s || "").split(/\n/).forEach(l => { const m = l.split(/[:=]/); if (m.length >= 2 && m[0].trim()) o[m[0].trim()] = m.slice(1).join(":").trim(); });
+  return o;
+}
+function parseLeave(s){
+  return String(s || "").split(/\n/).map(l => l.trim()).filter(Boolean).map(l => { const m = l.split(/[:=]/); return {v:Number(m[0]), label:(m.slice(1).join("=") || "").trim() || m[0]}; });
+}
+function wzFromCfg(c){
+  c = clone(c || cfg());
+  return {name:META ? META.name : "", label:c.label, tiers:c.tiers, statuses:c.statuses, stage1:c.stage1, stage2:c.stage2,
+    tieBreakers:c.tieBreakers, headOptions:c.headOptions, leaveOptions:c.leaveOptions, scoreGuide:c.scoreGuide, priorityRules:null};
+}
+function renderWiz(){
+  const W = WZ, el = $("wz-form"), n = v => v == null ? "" : v;
+  const rows = W.statuses.map((s, i) =>
+    `<tr><td><input class="wz-v" value="${esc(s.value)}" ${s.value === "X" ? "readonly" : ""} style="width:96px"></td>` +
+    `<td><input class="wz-l" value="${esc(s.label)}" style="width:180px"></td>` +
+    `<td><select class="wz-t">${W.tiers.map((t, k) => `<option value="${k}" ${k === s.tier ? "selected" : ""}>${k + 1}. ${esc(t)}</option>`).join("")}</select></td>` +
+    `<td><input class="wz-w1" type="number" value="${n(s.w1)}" style="width:62px"></td>` +
+    `<td><input class="wz-w2" type="number" value="${n(s.w2)}" style="width:62px"></td>` +
+    `<td><input type="checkbox" class="wz-xg" ${s.excludeGrade ? "checked" : ""}></td>` +
+    `<td><input type="checkbox" class="wz-xd" ${s.excludeDuty ? "checked" : ""}></td>` +
+    `<td><input class="wz-xl" value="${esc(s.excludedLabel || "")}" style="width:110px"></td>` +
+    `<td><input type="checkbox" class="wz-hv" ${s.halveCurrent ? "checked" : ""}></td>` +
+    `<td>${s.value === "X" ? "" : `<button class="tag" style="border:none;cursor:pointer;color:var(--red);font-weight:800" onclick="wzDelStatus(${i})">×</button>`}</td></tr>`).join("");
+  const tbSel = (k, i) => `<select class="wz-tbf inp"><option value="">(사용 안 함)</option>${Object.keys(TB_FIELDS).map(f => `<option value="${f}" ${k && k.f === f ? "selected" : ""}>${TB_FIELDS[f]}</option>`).join("")}</select>` +
+    `<select class="wz-tbd inp"><option value="desc" ${!k || k.dir !== "asc" ? "selected" : ""}>높은(많은) 쪽이 먼저</option><option value="asc" ${k && k.dir === "asc" ? "selected" : ""}>낮은(적은) 쪽이 먼저</option></select>`;
+  const tbs = [0, 1, 2, 3].map(i => `<div class="row"><b>${i + 1}순위</b>${tbSel(W.tieBreakers[i], i)}</div>`).join("");
+  el.innerHTML =
+    `<div class="fg" style="max-width:360px"><label>학교 이름</label><input id="wz-name" value="${esc(W.name)}"></div>` +
+    `<h5>① 순위 묶음 <small>(위 → 아래 순서로 높은 순위)</small></h5><p class="note">위 묶음은 점수·우대와 상관없이 항상 아래 묶음보다 앞섭니다. (예: 본교에 남는 교사 → 일반전보내신 → 휴직 → 만기)</p>` +
+    W.tiers.map((t, k) => `<div class="row"><b>${k + 1}.</b><input class="inp wz-tier" value="${esc(t)}" style="flex:1;min-width:160px"><button class="btn sm ghost" onclick="wzDelTier(${k})">삭제</button></div>`).join("") +
+    `<div class="btns"><button class="btn sm ghost" onclick="wzAddTier()">➕ 묶음 추가</button></div>` +
+    `<h5>② 교원 구분 <small>(점수 입력 화면의 선택지)</small></h5><p class="note">'가중치'는 숫자가 작을수록 먼저입니다(비워 두면 아래 ④의 기본값). '제외'를 체크하면 그 구분은 해당 단계에서 자동으로 제외 표기됩니다. '점수 반감'은 6개월 이상 휴직처럼 당해 학년점수의 1/2을 빼는 구분에 체크합니다.</p>` +
+    `<div class="tw"><table class="wz-st"><thead><tr><th>코드</th><th>표시 이름</th><th>순위 묶음</th><th>1단계<br>가중치</th><th>2단계<br>가중치</th><th>학년<br>제외</th><th>업무<br>제외</th><th>제외 표기</th><th>점수<br>반감</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>` +
+    `<div class="btns"><button class="btn sm ghost" onclick="wzAddStatus()">➕ 구분 추가</button></div>` +
+    `<h5>③ 부장 희망 선택지</h5><p class="note">한 줄에 하나. 이름에 '부장'이 들어가야 하며, '5학년부장'처럼 학년이 들어 있으면 1단계에서 그 학년으로 자동 배정됩니다.</p>` +
+    `<textarea id="wz-head" class="ta" rows="3">${esc(W.headOptions.join("\n"))}</textarea>` +
+    `<h5>④ 순서 가중치 <small>(숫자가 작을수록 먼저)</small></h5>` +
+    `<div class="row"><b>1단계(학년)</b> 부장 희망 <input id="wz-h1" type="number" class="inp" style="width:80px" value="${n(W.stage1.headWeight)}"> 기본 <input id="wz-d1" type="number" class="inp" style="width:80px" value="${n(W.stage1.defaultWeight)}"></div>` +
+    `<div class="row"><b>2단계(업무)</b> 부장 희망 <input id="wz-h2" type="number" class="inp" style="width:80px" value="${n(W.stage2.headWeight)}"> 기본 <input id="wz-d2" type="number" class="inp" style="width:80px" value="${n(W.stage2.defaultWeight)}"></div>` +
+    `<div class="fg" style="margin-top:8px"><label>2단계 순서를 학년별로 다르게 할 때 (한 줄에 하나, 예: 5학년:30)</label><textarea id="wz-gw" class="ta" rows="3">${esc(Object.entries(W.stage2.gradeWeights || {}).map(([k, v]) => k + ":" + v).join("\n"))}</textarea></div>` +
+    `<h5>⑤ 같은 순위일 때(동점) 비교 순서</h5>${tbs}` +
+    `<h5>⑥ 휴직 반영 선택지 <small>(점수 반감 구분에서 '당해 학년점수'로 고르는 목록)</small></h5><p class="note">한 줄에 하나: 점수=이름 (예: 3=2~4학년 (3점))</p>` +
+    `<textarea id="wz-leave" class="ta" rows="3">${esc(W.leaveOptions.map(o => o.v + "=" + o.label).join("\n"))}</textarea>` +
+    `<h5>⑦ 점수 입력 안내문 <small>(교사 입력 화면에 표시)</small></h5><textarea id="wz-guide" class="ta" rows="4">${esc(W.scoreGuide)}</textarea>` +
+    (W.priorityRules ? `<p class="note" style="margin-top:8px">📌 이 양식에는 우대 규정(학년 ${(W.priorityRules.gradeRules || []).length}개 · 업무 ${(W.priorityRules.dutyRules || []).length}개)이 함께 들어 있어, 적용하면 아래 [배정우대 관리]의 목록이 이 내용으로 바뀝니다.</p>` : `<p class="note" style="margin-top:8px">우대 규정 목록은 아래 [배정우대 관리]에서 따로 추가·수정합니다.</p>`);
+}
+function syncWiz(){
+  if (!WZ || !$("wz-name")) return;
+  const W = WZ, q = (s, r) => r.querySelector(s);
+  W.name = $("wz-name").value.trim();
+  W.tiers = [...document.querySelectorAll("#wz-form .wz-tier")].map(i => i.value.trim() || "묶음");
+  W.statuses = [...document.querySelectorAll("#wz-form .wz-st tbody tr")].map(r => {
+    const s = {value:q(".wz-v", r).value.trim(), label:q(".wz-l", r).value.trim(), tier:parseInt(q(".wz-t", r).value) || 0};
+    const w1 = numOrNull(q(".wz-w1", r).value), w2 = numOrNull(q(".wz-w2", r).value);
+    if (w1 != null) s.w1 = w1; if (w2 != null) s.w2 = w2;
+    if (q(".wz-xg", r).checked) s.excludeGrade = true;
+    if (q(".wz-xd", r).checked) s.excludeDuty = true;
+    if (q(".wz-hv", r).checked) s.halveCurrent = true;
+    s.excludedLabel = q(".wz-xl", r).value.trim();
+    return s;
+  });
+  W.headOptions = splitList($("wz-head").value);
+  W.stage1 = {headWeight:numOrNull($("wz-h1").value), defaultWeight:numOrNull($("wz-d1").value)};
+  W.stage2 = {headWeight:numOrNull($("wz-h2").value), defaultWeight:numOrNull($("wz-d2").value), gradeWeights:parseKV($("wz-gw").value)};
+  const tbf = [...document.querySelectorAll("#wz-form .wz-tbf")], tbd = [...document.querySelectorAll("#wz-form .wz-tbd")];
+  W.tieBreakers = tbf.map((s, i) => s.value ? {f:s.value, dir:tbd[i].value} : null).filter(Boolean);
+  W.leaveOptions = parseLeave($("wz-leave").value);
+  W.scoreGuide = $("wz-guide").value;
+}
+function wzAddTier(){ syncWiz(); WZ.tiers.push("새 묶음"); renderWiz(); }
+function wzDelTier(k){
+  syncWiz(); if (WZ.tiers.length <= 1) return alert("순위 묶음은 최소 1개가 필요합니다.");
+  WZ.tiers.splice(k, 1);
+  WZ.statuses.forEach(s => { if (s.tier === k) s.tier = Math.max(0, k - 1); else if (s.tier > k) s.tier--; });
+  renderWiz();
+}
+function wzAddStatus(){ syncWiz(); WZ.statuses.push({value:"새구분" + (WZ.statuses.length + 1), label:"새 구분", tier:0}); renderWiz(); }
+function wzDelStatus(i){ syncWiz(); WZ.statuses.splice(i, 1); renderWiz(); }
+function loadWizPreset(){
+  const k = $("wz-preset").value; if (!k) return;
+  if (!confirm("현재 양식의 내용이 선택한 템플릿 값으로 바뀝니다. (적용 버튼을 누르기 전에는 학교 설정이 바뀌지 않아요)")) return;
+  const p = PRESETS[k]; WZ = wzFromCfg(p.cfg); WZ.priorityRules = p.rules ? clone(p.rules) : null; WZ.name = META.name;
+  renderWiz();
+}
+
+/* ---------- 규정 마법사: 검증 · 미리보기 · 적용 ---------- */
+// 규칙 양식(JSON) 검사. 오류가 하나라도 있으면 적용할 수 없음
+function validateCfg(o){
+  const err = [], warn = [];
+  const num = (v, d, label) => { if (v == null || v === "") return d; const x = Number(v); if (!isFinite(x)) { err.push(`${label}: 숫자가 아닙니다 (${v})`); return d; } return x; };
+  const out = {};
+  out.tiers = (Array.isArray(o.tiers) ? o.tiers : []).map(x => String(x).trim()).filter(Boolean);
+  if (!out.tiers.length) err.push("순위 묶음이 하나도 없습니다.");
+  if (out.tiers.length > 8) err.push("순위 묶음은 8개까지만 만들 수 있습니다.");
+  const seen = new Set(); out.statuses = [];
+  (Array.isArray(o.statuses) ? o.statuses : []).forEach((s, i) => {
+    const value = String(s && s.value != null ? s.value : "").trim();
+    if (!value) { err.push(`교원 구분 ${i + 1}번: 코드가 비어 있습니다.`); return; }
+    if (seen.has(value)) { err.push(`교원 구분 코드가 중복됩니다: ${value}`); return; }
+    seen.add(value);
+    const tier = parseInt(s.tier);
+    if (!(tier >= 0 && tier < out.tiers.length)) err.push(`'${value}'의 순위 묶음 번호가 올바르지 않습니다.`);
+    const st = {value, label:String(s.label || value).trim(), tier:tier >= 0 ? tier : 0};
+    const w1 = num(s.w1, null, `'${value}' 1단계 가중치`), w2 = num(s.w2, null, `'${value}' 2단계 가중치`);
+    if (w1 != null) st.w1 = w1; if (w2 != null) st.w2 = w2;
+    if (s.excludeGrade) st.excludeGrade = true;
+    if (s.excludeDuty) st.excludeDuty = true;
+    if (s.halveCurrent) st.halveCurrent = true;
+    if (st.excludeGrade || st.excludeDuty) st.excludedLabel = String(s.excludedLabel || "").trim() || "해당없음(제외)";
+    out.statuses.push(st);
+  });
+  if (!seen.has("X")) { out.statuses.unshift({value:"X", label:"X (해당없음)", tier:0}); warn.push("기본 구분 'X(해당없음)'이 없어 자동으로 추가했습니다."); }
+  const s1 = o.stage1 || {}, s2 = o.stage2 || {};
+  out.stage1 = {headWeight:num(s1.headWeight, 10, "1단계 부장 가중치"), defaultWeight:num(s1.defaultWeight, 50, "1단계 기본 가중치")};
+  out.stage2 = {headWeight:num(s2.headWeight, 5, "2단계 부장 가중치"), defaultWeight:num(s2.defaultWeight, 45, "2단계 기본 가중치"), gradeWeights:{}};
+  Object.entries(s2.gradeWeights || {}).forEach(([k, v]) => {
+    if (!k.trim()) return;
+    if (/[.$#\[\]\/]/.test(k)) { err.push(`학년별 가중치 이름에 쓸 수 없는 글자가 있습니다: ${k}`); return; }
+    const x = num(v, null, `학년별 가중치 '${k}'`); if (x != null) out.stage2.gradeWeights[k.trim()] = x;
+  });
+  const tbSeen = new Set(); out.tieBreakers = [];
+  (Array.isArray(o.tieBreakers) ? o.tieBreakers : []).forEach(t => {
+    if (!t || !TB_FIELDS[t.f]) { err.push("동점 기준에는 점수·본교 경력·교육 총경력만 쓸 수 있습니다."); return; }
+    if (tbSeen.has(t.f)) { err.push(`동점 기준이 중복됩니다: ${TB_FIELDS[t.f]}`); return; }
+    tbSeen.add(t.f); out.tieBreakers.push({f:t.f, dir:t.dir === "asc" ? "asc" : "desc"});
+  });
+  if (!out.tieBreakers.length) { out.tieBreakers = [{f:"score", dir:"desc"}]; warn.push("동점 기준이 없어 '점수 높은 순'으로 두었습니다."); }
+  out.headOptions = [...new Set((Array.isArray(o.headOptions) ? o.headOptions : []).map(x => String(x).trim()).filter(Boolean))];
+  out.headOptions.forEach(h => { if (!h.includes("부장")) warn.push(`'${h}'에 '부장'이 들어 있지 않아 부장 희망으로 인식되지 않습니다.`); });
+  out.leaveOptions = (Array.isArray(o.leaveOptions) ? o.leaveOptions : []).map(x => ({v:Number(x.v), label:String(x.label || x.v)})).filter(x => isFinite(x.v));
+  if (out.statuses.some(s => s.halveCurrent) && !out.leaveOptions.length) err.push("'점수 반감' 구분이 있으면 ⑥ 휴직 반영 선택지가 필요합니다.");
+  out.scoreGuide = String(o.scoreGuide || "");
+  out.label = String(o.label || "");
+  let rules = null;
+  if (o.priorityRules) {
+    rules = {gradeRules:[], dutyRules:[]};
+    ["gradeRules", "dutyRules"].forEach(k => {
+      const cs = new Set();
+      (o.priorityRules[k] || []).forEach(r => {
+        const code = String(r && r.code || "").trim();
+        if (!code) { err.push("우대 규정에 약칭이 비어 있는 항목이 있습니다."); return; }
+        if (cs.has(code)) { err.push(`우대 규정 약칭이 중복됩니다: ${code}`); return; }
+        cs.add(code);
+        const w = num(r.weight, null, `우대 '${code}' 가중치`); if (w == null) { err.push(`우대 '${code}'의 가중치가 없습니다.`); return; }
+        rules[k].push({code, desc:String(r.desc || ""), weight:w});
+      });
+      rules[k].sort((a, b) => a.weight - b.weight);
+    });
+  }
+  return {errors:err, warnings:warn, cfg:out, rules};
+}
+// AI가 만든 JSON은 형식이 조금씩 달라서, 흔한 변형을 먼저 바로잡음
+function looseNorm(o){
+  const r = clone(o.config || o);
+  if (Array.isArray(r.tieBreakers)) r.tieBreakers = r.tieBreakers.map(t => typeof t === "string" ? {f:t, dir:"desc"} : t);
+  if (Array.isArray(r.leaveOptions)) r.leaveOptions = r.leaveOptions.map(x => typeof x === "string" ? {v:Number(x.split(/[:=]/)[0]), label:x.split(/[:=]/).slice(1).join("=") || x} : x);
+  if (Array.isArray(r.statuses)) r.statuses = r.statuses.map(s => { const n = {...s}; if (typeof n.tier === "string") n.tier = parseInt(n.tier); return n; });
+  if (!r.priorityRules && o.priorityRules) r.priorityRules = o.priorityRules;
+  return r;
+}
+function exportShape(c, rules){
+  return {schema:"solomon-rules-v1", label:c.label, tiers:c.tiers, statuses:c.statuses, stage1:c.stage1, stage2:c.stage2, tieBreakers:c.tieBreakers,
+    headOptions:c.headOptions, leaveOptions:c.leaveOptions, scoreGuide:c.scoreGuide, priorityRules:rules || {gradeRules:[], dutyRules:[]}, notes:[], uncertain:[]};
+}
+function aiPrompt(){
+  const ex = JSON.stringify(exportShape(clone(BAEGOT_CFG), BAEGOT_RULES), null, 1);
+  return `당신은 초등학교 '인사자문위원회 규정'을 읽고, 학년·업무 배정 프로그램(솔로몬)의 설정 JSON을 만드는 도우미입니다.
+
+[지켜야 할 규칙]
+1. 규정에 근거가 있는 항목만 규정대로 채웁니다. 근거가 없으면 예시 값을 그대로 쓰지 말고 기본값(아래 '기본값')을 쓰고, "uncertain" 배열에 "무엇이 불확실한지"를 적습니다.
+2. 각 설정마다 근거가 된 조항(제○조 ○항)을 "notes" 배열에 "항목: 조항 - 한 줄 설명" 형태로 적습니다.
+3. 추측하거나 지어내지 않습니다. 해석이 갈리면 "uncertain"에 두 해석을 모두 적습니다.
+4. 출력은 JSON 하나만 내고, 그 앞뒤에 설명을 붙이지 않습니다.
+
+[필드 설명]
+- tiers: 순위 묶음(높은 순위부터). 위 묶음은 점수·우대와 상관없이 항상 아래 묶음보다 앞섭니다. 예) 본교 재직 → 일반전보내신 → 1년 휴직 → 만기 전보자
+- statuses: 교사가 고르는 '구분'. value=코드, label=화면 표시, tier=tiers의 번호(0부터). w1/w2=1단계(학년)·2단계(업무) 순서 가중치(작을수록 먼저, 없으면 기본값). excludeGrade/excludeDuty=true면 그 단계에서 자동 제외, excludedLabel=제외 표기, halveCurrent=true면 당해 학년점수의 1/2을 감산(예: 6개월 이상 휴직). 반드시 value가 "X"인 기본 구분을 포함하세요.
+- stage1: 1단계(학년 선택) {headWeight: 부장 희망자 가중치, defaultWeight: 기본}
+- stage2: 2단계(업무 선택) {headWeight, defaultWeight, gradeWeights: {"5학년":30,...} 1단계에서 고른 학년별 가중치}
+- tieBreakers: 같은 순위일 때 비교 순서. f는 "score"(점수) "schoolCar"(본교 경력) "totalCar"(교육 총경력) 중 하나, dir는 "desc"(높은 쪽 먼저) 또는 "asc"
+- headOptions: 부장 희망 선택지(이름에 '부장' 포함)
+- leaveOptions: 점수 반감 구분에서 '당해 학년점수'로 고르는 목록 [{"v":3,"label":"2~4학년 (3점)"}]
+- scoreGuide: 교사 입력 화면에 보일 점수 계산 안내문(규정의 점수 규정을 요약)
+- priorityRules: 우대 규정 목록. gradeRules=1단계(학년) 우대, dutyRules=2단계(업무) 우대. 각 항목 {code:"우대1", desc:"조항과 설명", weight:숫자(작을수록 먼저)}. 가중치는 같은 묶음 안에서 일반 교사의 기본 가중치보다 작아야 우대가 됩니다.
+
+[기본값] 묶음 4개(재직/일반내신/1년휴직/만기), 가중치 1단계 부장10·기본50, 2단계 부장5·기본45, 동점은 점수→본교경력→총경력 높은 순
+
+[예시: 다른 학교(배곧초)의 값입니다. 형식만 참고하고, 값은 반드시 아래 규정에 맞게 새로 정하세요]
+${ex}
+
+[이 학교의 규정 전문]
+${REGTXT.trim() || "(여기에 규정 내용을 붙여넣거나, 이 대화에 규정 PDF를 첨부하세요)"}`;
+}
+async function copyAiPrompt(){
+  const ok = await copyText(aiPrompt());
+  if (ok) alert("해석 요청문을 복사했습니다.\nClaude 등 AI 채팅에 붙여넣어 보내고, 돌아온 JSON을 오른쪽 칸에 붙여넣으세요.\n※ 규정에는 교원 개인정보가 없지만, 이름·점수 같은 개인 정보는 AI에 넣지 마세요.");
+}
+function importWizJson(){
+  const raw = $("wz-json").value, a = raw.indexOf("{"), b = raw.lastIndexOf("}"), box = $("wz-preview");
+  box.classList.remove("hide");
+  if (a < 0 || b < a) { box.innerHTML = "⚠️ JSON을 찾지 못했습니다. { 로 시작해 } 로 끝나는 내용을 붙여넣어 주세요."; return; }
+  let o; try { o = JSON.parse(raw.slice(a, b + 1)); } catch(e) { box.innerHTML = "⚠️ JSON 형식 오류: " + esc(e.message); return; }
+  const v = validateCfg(looseNorm(o));
+  if (v.errors.length) { box.innerHTML = `<b style="color:#c62828">⚠️ 고쳐야 할 항목 (불러오지 않았습니다)</b><br>` + v.errors.map(esc).join("<br>"); return; }
+  WZ = wzFromCfg(v.cfg); WZ.priorityRules = v.rules; WZ.name = META.name;
+  renderWiz();
+  const notes = Array.isArray(o.notes) ? o.notes : [], unc = Array.isArray(o.uncertain) ? o.uncertain : [];
+  box.innerHTML = `✅ 양식에 불러왔습니다. <b>아직 적용 전입니다.</b> 아래 양식을 규정과 하나씩 대조하세요.` +
+    (v.warnings.length ? `<br>⚠️ ${v.warnings.map(esc).join("<br>⚠️ ")}` : "") +
+    (unc.length ? `<br><b style="color:#b45a0a">AI가 불확실하다고 한 부분</b><br>• ${unc.map(x => esc(typeof x === "string" ? x : JSON.stringify(x))).join("<br>• ")}` : "") +
+    (notes.length ? `<br><b>AI가 적은 근거</b><br>• ${notes.map(x => esc(typeof x === "string" ? x : JSON.stringify(x))).join("<br>• ")}` : "");
+}
+function exportWizJson(){
+  syncWiz(); const v = validateCfg(WZ);
+  if (v.errors.length) { previewWiz(); return alert("고쳐야 할 항목이 있어 내려받을 수 없습니다."); }
+  fileDownload(JSON.stringify(exportShape(v.cfg, v.rules || (state && state.priorityRules)), null, 1), `솔로몬_규칙_${(META.name || "학교")}.json`);
+}
+const SAMPLE_PREVIEW = [
+  {name:"교사A", score:12, schoolCar:3, totalCar:10, transferF:"X", headHope:"X"}, {name:"교사B", score:12, schoolCar:5, totalCar:8, transferF:"X", headHope:"X"},
+  {name:"교사C", score:9, schoolCar:2, totalCar:6, transferF:"X", headHope:"교무부장"}, {name:"교사D", score:15, schoolCar:1, totalCar:20, transferF:"일반내신", headHope:"X"},
+  {name:"교사E", score:8, schoolCar:4, totalCar:9, transferF:"복직", headHope:"X"}, {name:"교사F", score:11, schoolCar:6, totalCar:15, transferF:"만기", headHope:"X"}
+];
+function previewWiz(){
+  syncWiz(); const v = validateCfg(WZ), box = $("wz-preview");
+  box.classList.remove("hide");
+  if (v.errors.length) { box.innerHTML = `<b style="color:#c62828">⚠️ 고쳐야 할 항목</b><br>` + v.errors.map(esc).join("<br>"); return false; }
+  const rulesNew = v.rules || (state && state.priorityRules) || DEFAULT_RULES, rulesOld = (state && state.priorityRules) || DEFAULT_RULES;
+  const newC = normCfg(v.cfg), real = ((state && state.teachers) || []).length > 0;
+  const T = real ? state.teachers : SAMPLE_PREVIEW;
+  let html = (v.warnings.length ? `⚠️ ${v.warnings.map(esc).join("<br>⚠️ ")}<br>` : "");
+  [["GRADE", "1단계(학년) 순서"], ["DUTY", "2단계(업무) 순서"]].forEach(([mode, title]) => {
+    const after = sortTeachers(clone(T), mode, rulesNew, null, newC);
+    if (!real) { html += `<b>${title}</b> (샘플 6명): ${after.map(t => esc(t.name) + "(" + esc(t.transferF) + ")").join(" → ")}<br>`; return; }
+    const before = sortTeachers(clone(T), mode, rulesOld, null, cfg());
+    const was = new Map(before.map(t => [t.name, t.rank]));
+    const ch = after.filter(t => was.get(t.name) !== t.rank);
+    html += `<b>${title}</b>: ${ch.length ? `${ch.length}명의 순위가 바뀝니다` : "순위 변화 없음"}<br>` +
+      ch.slice(0, 30).map(t => `&nbsp;• ${esc(t.name)} ${was.get(t.name)}위 → <b>${t.rank}위</b>`).join("<br>") + (ch.length ? "<br>" : "");
+  });
+  box.innerHTML = (real ? "" : "ℹ️ 등록된 교원이 없어 샘플로 보여 드립니다.<br>") + html + "✅ 양식에 오류가 없습니다. [규칙 적용]을 눌러 반영하세요.";
+  return true;
+}
+async function applyWiz(){
+  syncWiz(); const v = validateCfg(WZ);
+  if (v.errors.length) { previewWiz(); return alert("고쳐야 할 항목이 있습니다. 미리보기 영역을 확인하세요."); }
+  if (!confirm("이 규칙을 학교에 적용할까요?\n· 순위가 다시 계산됩니다 (진행 중이면 현재 차례가 가장 앞의 미선택자로 이동)\n· 적용 전 자동 백업됩니다")) return;
+  await backupNow("규정 변경 전");
+  const upd = clone(v.cfg);
+  await R("config").update(upd);
+  setConfig({...(CONFIG || {}), ...upd});
+  if (WZ.name && WZ.name !== META.name) await R("meta").update({name:WZ.name});
+  await resortAndSave(v.rules ? {priorityRules:clone(v.rules)} : {});
+  await log("[관리자] 규정 설정 적용" + (upd.label ? `: ${upd.label}` : ""));
+  fillInputControls(); renderAdmin();
+  alert("✅ 규정 설정을 적용했습니다.");
+}
+
+/* ---------- 보안 · 개인정보 ---------- */
+function fillSecurity(){
+  const c = cfg(), a = c.access;
+  $("sc-code").textContent = SID; $("sc-link").textContent = schoolLink(SID);
+  $("sc-self").checked = !!a.selfInput; $("sc-pin").checked = !!a.requirePin; $("sc-vis").value = a.scoreVisibility || "all";
+  $("sc-notice").value = c.privacyNotice; $("sc-keep").value = c.retentionDays;
+  $("sc-oldpw-wrap").classList.toggle("hide", isCreator);
+}
+async function saveAccess(){
+  const keep = parseInt($("sc-keep").value);
+  if (!(keep >= 0 && keep <= 3650)) return alert("보관 기간은 0~3650일로 입력하세요. (0 = 자동 삭제 안 함)");
+  await R("config").update({access:{selfInput:$("sc-self").checked, requirePin:$("sc-pin").checked, scoreVisibility:$("sc-vis").value}, privacyNotice:$("sc-notice").value, retentionDays:keep});
+  log("[관리자] 접근·개인정보 설정 변경");
+  alert("저장했습니다.");
+}
+async function changeAdminPw(){
+  const o = $("sc-old").value, n1 = $("sc-new").value, n2 = $("sc-new2").value;
+  if (!isCreator && !(await checkAdminPw(o))) return alert("현재 비밀번호가 맞지 않습니다.");
+  if (n1.length < 6) return alert("새 비밀번호는 6자 이상으로 해 주세요.");
+  if (n1 !== n2) return alert("새 비밀번호 두 칸이 다릅니다.");
+  const salt = rndSalt(), hash = await pbkdf2Bits(n1, salt);
+  await R("meta").update({salt, hash});
+  $("sc-old").value = $("sc-new").value = $("sc-new2").value = "";
+  log("[관리자] 비밀번호 변경");
+  alert("✅ 비밀번호를 바꿨습니다. 다음 접속부터 새 비밀번호를 쓰세요.");
+}
+async function issuePins(all){
+  const list = clone((state && state.teachers) || []), out = [["성명", "PIN"]];
+  if (!list.length) return alert("등록된 교원이 없습니다.");
+  if (all && !confirm("모든 교원의 PIN을 새로 발급합니다. 기존 PIN은 쓸 수 없게 됩니다. 계속할까요?")) return;
+  for (const t of list) {
+    if (all || !t.pinH) {
+      const pin = randFrom("0123456789", 4);
+      t.pinH = await sha256hex(`${SID}|${t.name}|${pin}`); out.push([t.name, pin]);
+    }
+  }
+  if (out.length === 1) return alert("새로 발급할 대상이 없습니다. (모두 발급됨)");
+  await R("draft/teachers").set(list);
+  log(`[관리자] PIN ${all ? "전체 재" : ""}발급 ${out.length - 1}명`);
+  csvDownload(out, `PIN목록_${META.name}.csv`);
+  alert(`PIN ${out.length - 1}개를 발급하고 목록을 내려받았습니다.\n개별 전달 후 이 파일은 삭제하세요. (PIN은 화면에 다시 표시되지 않습니다)`);
+}
+
+/* ---------- 교원 세부 조정 (순서 이동 · 정보 수정 · 추가 · 일괄 등록) ---------- */
+function saveTeachers(list, why){
+  backupNow("교원 정보 변경 전");
+  const mode = state.stage === 2 ? "DUTY" : "GRADE", sl = clone(sortTeachers(list, mode)), up = {teachers:sl};
+  if (state.stage > 0) up.currentTurn = nextTurn(sl, state.stage, 0);
+  log("[관리자] " + why);
+  return R("draft").update(up);
+}
+async function moveAdj(i, d){
+  const t0 = state.teachers[i];
+  const why = await askPrompt(`<b>${esc(t0.name)}</b> 선생님을 ${d > 0 ? "한 칸 위로" : "한 칸 아래로"} 옮깁니다.<br><small>사유를 적어 주세요 (변경 기록에 남습니다)</small>`, {yes:"옮기기", ph:"예: 인사자문위원회 결정 2026-11-20"});
+  if (!why || !why.trim()) return;
+  const list = clone(state.teachers); list[i].adj = (list[i].adj || 0) + d; list[i].adjWhy = why.trim();
+  saveTeachers(list, `순서 조정: ${t0.name} ${d > 0 ? "▲" : "▼"} (누적 ${list[i].adj > 0 ? "+" : ""}${list[i].adj}) 사유: ${why.trim()}`);
+}
+function clearAdj(i){
+  const t0 = state.teachers[i]; if (!confirm(`${t0.name} 선생님의 수동 순서 조정을 해제할까요?`)) return;
+  const list = clone(state.teachers); delete list[i].adj; delete list[i].adjWhy;
+  saveTeachers(list, `순서 조정 해제: ${t0.name}`);
+}
+async function openTeacherEditor(i){
+  const t = i >= 0 ? state.teachers[i] : null, c = cfg();
+  const opt = (arr, cur) => arr.map(([v, l]) => `<option value="${esc(v)}" ${v === cur ? "selected" : ""}>${esc(l)}</option>`).join("");
+  const html = `<div style="text-align:left;font-size:.9rem"><b>${t ? esc(t.name) + " 선생님 정보 수정" : "교원 추가"}</b>` +
+    `<div class="fg" style="margin-top:8px"><label>성명</label><input id="te-name" value="${esc(t ? t.name : "")}" ${t ? "readonly" : ""}></div>` +
+    `<div class="fg"><label>점수</label><input id="te-score" type="number" step="0.1" value="${t ? (t.scoreRaw != null ? t.scoreRaw : t.score) : ""}"></div>` +
+    `<div class="fg"><label>본교경력</label><input id="te-school" type="number" step="0.01" value="${t ? t.schoolCar : ""}"></div>` +
+    `<div class="fg"><label>교육총경력</label><input id="te-total" type="number" step="0.01" value="${t ? t.totalCar : ""}"></div>` +
+    `<div class="fg"><label>구분</label><select id="te-st">${opt(c.statuses.map(s => [s.value, s.label]), t ? (t.transferF || "X") : "X")}</select></div>` +
+    `<div class="fg"><label>당해 학년점수 (점수 반감 구분일 때)</label><select id="te-leave"><option value="">선택 안 함</option>${opt(c.leaveOptions.map(o => [String(o.v), o.label]), t && t.leaveYear ? String(t.leaveYear) : "")}</select></div>` +
+    `<div class="fg"><label>부장 희망</label><select id="te-head">${opt([["X", "X (해당없음)"], ...c.headOptions.map(h => [h, h])], t ? (t.headHope || "X") : "X")}</select></div>` +
+    (t ? `<div class="btns"><button class="btn sm" style="background:var(--red)" onclick="deleteTeacher(${i})">🗑️ 이 교원 삭제</button></div>` : "") +
+    `<small>저장하면 순위가 다시 계산되고, 변경 내용이 기록에 남습니다.</small></div>`;
+  const ok = await askConfirm(html, {yes:"저장", no:"취소"});
+  if (!ok) return;
+  const name = $("te-name").value.trim(); if (!name) return alert("성명을 입력하세요.");
+  const list = clone(state.teachers || []);
+  if (!t && list.some(x => x.name === name)) return alert("이미 같은 이름의 교원이 있습니다.");
+  const st = $("te-st").value, S = statusByValue(st), leaveYear = parseFloat($("te-leave").value) || 0;
+  if (S && S.halveCurrent && !leaveYear) return alert("이 구분은 '당해 학년점수'를 선택해야 합니다.");
+  const e = clone(buildEntry({name, rawScore:parseFloat($("te-score").value) || 0, schoolCar:parseFloat($("te-school").value) || 0, totalCar:parseFloat($("te-total").value) || 0, transferF:st, headHope:$("te-head").value, leaveYear}, t));
+  if (t) list[i] = e; else list.push(e);
+  saveTeachers(list, `${t ? "정보 수정" : "교원 추가"}: ${name}`);
+}
+function deleteTeacher(i){
+  $("m-no").click();
+  const t = state.teachers[i];
+  if (!confirm(`${t.name} 선생님을 명단에서 삭제할까요?\n(배정된 학년·업무도 함께 비워집니다)`)) return;
+  const list = clone(state.teachers); list.splice(i, 1);
+  saveTeachers(list, `교원 삭제: ${t.name}`);
+}
+function bulkImport(){
+  const lines = $("bulk-text").value.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  if (!lines.length) return alert("붙여넣을 내용이 없습니다.");
+  const c = cfg(), list = clone((state && state.teachers) || []), rep = []; let add = 0, upd = 0;
+  lines.forEach((ln, idx) => {
+    const p = ln.split(/\t|,/).map(s => s.trim()), [name, sc, sch, tot, st, hd, lv] = p;
+    if (idx === 0 && isNaN(parseFloat(sc))) return;
+    if (!name || isNaN(parseFloat(sc))) { rep.push(`${idx + 1}행: 이름·점수를 확인하세요`); return; }
+    const S = c.statuses.find(s => s.value === st || s.label === st) || (st ? null : statusByValue("X"));
+    if (!S) { rep.push(`${idx + 1}행(${name}): 알 수 없는 구분 '${st}'`); return; }
+    const head = hd && c.headOptions.includes(hd) ? hd : "X";
+    if (hd && hd !== "X" && head === "X") rep.push(`${idx + 1}행(${name}): 부장 희망 '${hd}'은(는) 선택지에 없어 X로 처리`);
+    const leaveYear = parseFloat(lv) || 0;
+    if (S.halveCurrent && !leaveYear) { rep.push(`${idx + 1}행(${name}): 점수 반감 구분인데 7번째 칸(당해 학년점수)이 없어 반감 없이 등록`); }
+    const k = list.findIndex(x => x.name === name);
+    const e = buildEntry({name, rawScore:parseFloat(sc), schoolCar:parseFloat(sch) || 0, totalCar:parseFloat(tot) || 0, transferF:S.value, headHope:head, leaveYear}, k >= 0 ? list[k] : null);
+    if (k >= 0) { list[k] = e; upd++; } else { list.push(e); add++; }
+  });
+  if (!add && !upd) return alert("등록할 수 있는 줄이 없습니다.\n" + rep.join("\n"));
+  if (!confirm(`추가 ${add}명 · 수정 ${upd}명을 반영할까요?` + (rep.length ? `\n\n확인 필요:\n${rep.join("\n")}` : ""))) return;
+  saveTeachers(list, `명단 일괄 등록 (추가 ${add}, 수정 ${upd})`).then(() => { $("bulk-text").value = ""; });
+}
+function exportTemplateCSV(){ csvDownload([["성명", "점수", "본교경력", "총경력", "구분(코드)", "부장희망", "당해학년점수(반감 구분만)"], ["홍길동", "12.5", "2", "7.08", "X", "X", ""]], "교원명단_양식.csv"); }
+
+function bulkDuties(){
+  const lines = $("d-bulk").value.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  if (!lines.length) return alert("추가할 업무를 입력하세요.");
+  const list = getDuties(), groups = getGroups(); let add = 0;
+  lines.forEach(l => {
+    const must = l.endsWith("*"), name = l.replace(/\*+$/, "").trim();
+    if (!name || list.some(d => d.name === name)) return;
+    const d = {name, grades:[], must};
+    d.grades = groups.filter(g => applicable(d, g)); list.push(d); add++;
+  });
+  if (!add) return alert("새로 추가할 업무가 없습니다. (이미 있는 이름은 건너뜁니다)");
+  log(`[관리자] 업무 일괄 추가 ${add}개`); saveDuties(list).then(() => { $("d-bulk").value = ""; });
+}
+
+/* ---------- 관리자 화면 열기 / 시작 ---------- */
+function openAdminUI(){
+  purgeOld();
+  WZ = wzFromCfg(); renderWiz(); renderRegTags(); renderRegHits(); fillSecurity(); renderAdmin();
+  $("wz-preset").innerHTML = '<option value="">불러올 템플릿 선택…</option>' + Object.entries(PRESETS).map(([k, p]) => `<option value="${k}">${esc(p.label)}</option>`).join("");
+}
+(function boot(){
+  let code = null;
+  try { code = new URLSearchParams(location.search).get("s"); } catch(e) {}
+  if (!code) { try { code = localStorage.getItem("solomonSchool"); } catch(e) {} }
+  if (code) enterSchool(code).then(ok => { if (!ok) showLanding(code); });
+  else showLanding();
+})();
+
 </script>
 </body>
 </html>
