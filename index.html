@@ -6,6 +6,7 @@
 <title>솔로몬 - 학년·업무 배정 시스템</title>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <style>
 :root{
   --bg:#eef2fb; --card:#fff; --ink:#1c2540; --sub:#5b6682; --line:#dfe5f3;
@@ -178,6 +179,14 @@ code{background:#eef1f7;padding:1px 7px;border-radius:6px;font-size:.85em;word-b
 #role-badge{background:#fff3b0;color:#6b4e00}
 .adjbtn{padding:2px 8px;min-height:30px}
 .wiz-grid>*,.wiz-box{min-width:0}.wiz-box{overflow-x:auto}
+.di-list{max-height:300px;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:var(--r-s);padding:6px}
+.di-row{display:flex;gap:8px;align-items:center;padding:3px 0}.di-row .inp{flex:1;min-width:0}.di-row input[type=checkbox]{width:20px;height:20px}
+.admin-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px;position:sticky;top:0;background:#fff;padding:6px 0;z-index:5}
+.admin-tabs button{flex:1;min-width:92px;padding:10px 8px;border:1px solid var(--line);background:#f4f6fb;border-radius:10px;font-weight:800;font-size:.88rem;cursor:pointer}
+.admin-tabs button.on{background:var(--main);color:#fff;border-color:var(--main)}
+.tab-hide{display:none!important}
+.admin-help{background:#eef5ff;border:1px solid #c9dcff;border-radius:10px;padding:10px 12px;font-size:.85rem;line-height:1.6;margin-bottom:10px}
+input[type=file]{max-width:100%;min-width:0;font-size:.8rem}
 </style>
 </head>
 <body>
@@ -197,6 +206,7 @@ code{background:#eef1f7;padding:1px 7px;border-radius:6px;font-size:.85em;word-b
   <div class="i-skip">화면을 누르면 바로 시작</div>
 </div>
 
+<div id="auth-warn" class="hide" style="background:#fdecea;color:#b71c1c;padding:10px 14px;font-size:.85rem"></div>
 <!-- 학교 입장 -->
 <div id="landing" class="land hide">
   <div class="card" style="text-align:center">
@@ -271,6 +281,7 @@ code{background:#eef1f7;padding:1px 7px;border-radius:6px;font-size:.85em;word-b
   <div class="cfg blue" id="wiz-card">
     <h4 style="color:#1e3a8a">📜 우리 학교 규정 반영하기 (규정 마법사)</h4>
     <p class="note">학교마다 학년 배정·업무 배정 순위가 다릅니다. <b>① 규정 PDF를 읽고 → ② 관련 조항을 찾아 보며 → ③ 아래 양식을 채우거나 AI 해석 결과를 불러오고 → ④ 미리보기로 순위 변화를 확인한 뒤 적용</b>하세요. 프로그램이 규정 문장을 스스로 해석해 확정하지 않습니다. 최종 확인은 인사담당자가 합니다.</p>
+    <details style="margin-bottom:10px"><summary style="cursor:pointer;font-weight:800;color:#1e3a8a;padding:6px 0">🔧 고급: 규정 PDF 읽기 · AI로 규칙 자동 채우기 (선택)</summary>
     <div class="wiz-grid">
       <div class="wiz-box">
         <strong>① 규정 PDF 읽기</strong>
@@ -291,8 +302,9 @@ code{background:#eef1f7;padding:1px 7px;border-radius:6px;font-size:.85em;word-b
         <p class="note" style="margin-top:8px">※ 이름·점수 같은 <b>교원 개인정보는 AI에 넣지 마세요.</b> 규정 문서만 보냅니다.</p>
       </div>
     </div>
+    </details>
     <div class="wiz-box" style="margin-top:10px">
-      <strong>④ 순위 규칙 양식</strong>
+      <strong>순위 규칙 양식</strong> <small>(처음이면 아래 [템플릿 불러오기]로 시작해 필요한 칸만 고치세요)</small>
       <div class="row"><select id="wz-preset" class="inp"></select><button class="btn sm ghost" onclick="loadWizPreset()">템플릿 불러오기</button></div>
       <div id="wz-form" class="wz-form"></div>
       <div class="btns"><button class="btn sm" style="background:#0284c7" onclick="previewWiz()">🔍 미리보기 (순위 변화 확인)</button><button class="btn" onclick="applyWiz()">✅ 규칙 적용</button></div>
@@ -300,6 +312,15 @@ code{background:#eef1f7;padding:1px 7px;border-radius:6px;font-size:.85em;word-b
     </div>
   </div>
 
+  <div class="cfg" id="di-card" style="border:2px solid #7fd1b9;background:#f4fffb">
+    <h4 style="color:#0f766e">📥 업무분장표로 업무 목록 자동 만들기</h4>
+    <p class="note">작년 <b>업무분장표</b>(엑셀·한글·PDF)를 올리거나, 표의 업무 칸을 복사(Ctrl+C)해서 붙여넣으면 업무 목록을 자동으로 만들어 줍니다. 잘못된 것은 반영하기 전에 고칠 수 있고, 반영한 뒤에도 아래 [업무 목록]에서 언제든 수정·삭제할 수 있습니다. (사람 이름 칸은 무시합니다)</p>
+    <div class="row"><input type="file" id="di-file" accept=".csv,.txt,.tsv,.xlsx,.xls,.pdf" onchange="diFile(this.files[0])"></div>
+    <div id="di-status" class="note"></div>
+    <textarea id="di-text" class="ta" rows="5" placeholder="여기에 업무분장표를 붙여넣으세요 (엑셀·한글 표 복사 OK, 한 줄에 업무 하나도 OK)"></textarea>
+    <div class="btns"><button class="btn sm" onclick="diAnalyze()">🔎 업무 찾기</button></div>
+    <div id="di-preview"></div>
+  </div>
   <div class="cfg" id="sec-card" style="border:2px solid #b8a3f5;background:#faf7ff">
     <h4 style="color:#5a2fd0">🔐 보안 · 개인정보</h4>
     <div class="guide" style="margin-top:0">
@@ -314,7 +335,6 @@ code{background:#eef1f7;padding:1px 7px;border-radius:6px;font-size:.85em;word-b
       <button class="btn sm" onclick="changeAdminPw()">변경</button>
     </div>
     <strong style="font-size:.85rem;display:block;margin-top:14px">② 접근 · 공개 범위</strong>
-    <label class="chk" style="margin-top:6px"><input type="checkbox" id="sc-self"> 교사가 자기 점수·경력을 직접 입력 (끄면 인사담당자만 입력)</label>
     <label class="chk"><input type="checkbox" id="sc-pin"> 본인 확인 PIN 사용 (다른 사람 이름으로 선택하는 것을 막음)</label>
     <div class="row"><span style="font-size:.85rem">점수·경력 공개 범위</span>
       <select id="sc-vis" class="inp"><option value="all">모든 교원에게 공개 (기존 시트 방식)</option><option value="self">본인 것만 보임 (순위·이름·배정은 공개)</option></select></div>
@@ -475,7 +495,6 @@ code{background:#eef1f7;padding:1px 7px;border-radius:6px;font-size:.85em;word-b
   </div>
   <div class="guide">💡 <strong>점수 입력 안내</strong><br><span id="in-guide"></span></div>
   <div class="guide" style="background:#fff8e6;border-color:#f0d58a;color:#6b5a2a"><span id="in-notice"></span>
-    <div id="in-consent-wrap" style="margin-top:8px"><label class="chk"><input type="checkbox" id="in-consent"> 위 개인정보 수집·이용 안내를 확인했고 동의합니다</label></div>
   </div>
 </div>
 
@@ -563,7 +582,7 @@ const GENERIC_CFG = {
   headOptions:["1학년부장","2학년부장","3학년부장","4학년부장","5학년부장","6학년부장","교무부장","연구부장"],
   leaveOptions:[{v:2,label:"교과전담 희망 (2점)"},{v:3,label:"2~4학년 (3점)"},{v:4,label:"1·5학년 (4점)"},{v:5,label:"6학년·임의배정 (5점)"}],
   scoreGuide:"학교 규정에 따라 점수·경력을 입력하세요. 순위 계산 방식은 인사담당자가 규정 마법사에서 정합니다.",
-  access:{selfInput:true, requirePin:false, scoreVisibility:"all"},
+  access:{selfInput:false, requirePin:false, scoreVisibility:"all"},
   privacyNotice:DEFAULT_NOTICE, retentionDays:30
 };
 
@@ -682,14 +701,16 @@ function attachSchool(){
   listen(R("draft"), snap => {
     state = snap.val(); LOADED.draft = true;
     if (!state) {
-      if (!initing) { initing = true; const t = tpl(); R("draft").set({stage:0, currentTurn:0, priorityConfirmed:false, naesinPolicy:"LAST", gradeLimits:t.gradeLimits, duties:t.duties, priorityRules:t.rules}); }
+      if (isAdmin && !initing) { initing = true; const t = tpl(); R("draft").set({stage:0, currentTurn:0, priorityConfirmed:false, naesinPolicy:"LAST", gradeLimits:t.gradeLimits, duties:t.duties, priorityRules:t.rules}); }
       return;
     }
-    const t = tpl();
-    if (!state.gradeLimits) R("draft/gradeLimits").set(t.gradeLimits);
-    if (!state.duties && t.duties.length) R("draft/duties").set(t.duties);
-    if (!state.priorityRules && t.rules.gradeRules.length) R("draft/priorityRules").set(t.rules);
-    if (!state.naesinPolicy) R("draft/naesinPolicy").set("LAST");
+    const t = tpl(), nop = () => {};
+    if (isAdmin) {   // 빠진 기본 설정은 관리자만 채울 수 있음
+      if (!state.gradeLimits) R("draft/gradeLimits").set(t.gradeLimits).catch(nop);
+      if (!state.duties && t.duties.length) R("draft/duties").set(t.duties).catch(nop);
+      if (!state.priorityRules && t.rules.gradeRules.length) R("draft/priorityRules").set(t.rules).catch(nop);
+      if (!state.naesinPolicy) R("draft/naesinPolicy").set("LAST").catch(nop);
+    }
     maybeRender();
   });
   attachLogs();
@@ -731,14 +752,42 @@ function calcLeave(){
   $("leave-prev").textContent = !on ? "" : y ? `자동 계산: ${raw} − ${y}/2 = ${raw - y / 2}점` : "당해 학년점수를 선택하세요";
 }
 
-/* ---------- 관리자(인사담당자) 로그인 ---------- */
-let pwFails = 0, pwLockUntil = 0;
-async function checkAdminPw(pw){
-  if (Date.now() < pwLockUntil) { alert(`비밀번호를 여러 번 틀려 ${Math.ceil((pwLockUntil - Date.now()) / 1000)}초 뒤에 다시 시도할 수 있어요.`); return false; }
-  const ok = !!(META && META.hash) && (await pbkdf2Bits(pw, META.salt)) === META.hash;
-  if (ok) { pwFails = 0; return true; }
-  if (++pwFails >= 5) { pwLockUntil = Date.now() + 30000; pwFails = 0; }
-  return false;
+/* ---------- 로그인 (Firebase Authentication) ----------
+   · 교사/열람자: 익명 로그인 (읽기와 '내 차례 선택'만 규칙으로 허용)
+   · 인사담당자: 이메일(학교별 자동 생성)+비밀번호 로그인, 서버 규칙의 admins 목록에 있어야 쓰기 가능
+   · 제작자: 별도 계정, platform/creators 목록에 있어야 함 */
+const auth = firebase.auth();
+let AUTH_OK = true;
+const authMsg = e => {
+  const c = (e && e.code) || "";
+  if (c === "auth/operation-not-allowed" || c === "auth/admin-restricted-operation") return "Firebase 콘솔 → Authentication → 로그인 방법에서 '익명'과 '이메일/비밀번호'를 켜 주세요.";
+  if (c === "auth/wrong-password" || c === "auth/invalid-credential" || c === "auth/user-not-found" || c === "auth/invalid-login-credentials") return "이메일 또는 비밀번호가 맞지 않습니다.";
+  if (c === "auth/too-many-requests") return "시도가 너무 많아 잠시 막혔습니다. 몇 분 뒤에 다시 시도하세요.";
+  if (c === "auth/weak-password") return "비밀번호는 6자 이상이어야 합니다.";
+  if (c === "auth/email-already-in-use") return "이미 사용 중인 이메일입니다.";
+  if (c === "auth/network-request-failed") return "인터넷 연결을 확인하세요.";
+  return (e && e.message) || "알 수 없는 오류";
+};
+async function ensureAnon(){
+  if (auth.currentUser) return true;
+  try { await auth.signInAnonymously(); AUTH_OK = true; }
+  catch(e) { AUTH_OK = false; const w = $("auth-warn"); w.textContent = "⚠️ 보안 로그인을 시작하지 못했습니다: " + authMsg(e); w.classList.remove("hide"); }
+  return AUTH_OK;
+}
+async function startAuth(){
+  try { await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION); } catch(e) {}
+  await new Promise(res => { const un = auth.onAuthStateChanged(() => { un(); res(); }); });
+  await ensureAnon();
+}
+// 지금 로그인한 계정이 제작자/이 학교 인사담당자인지 서버 목록으로 확인
+async function refreshRole(){
+  const u = auth.currentUser; isAdmin = false; isCreator = false;
+  if (u && !u.isAnonymous) {
+    try { if ((await db.ref("platform/creators/" + u.uid).once("value")).exists()) isCreator = isAdmin = true; } catch(e) {}
+    if (!isAdmin && SID) { try { isAdmin = (await R("admins/" + u.uid).once("value")).exists(); } catch(e) {} }
+  }
+  setRoleBadge();
+  return isAdmin;
 }
 function setRoleBadge(){
   const b = $("role-badge");
@@ -749,12 +798,16 @@ async function toggleAdmin(){
   const p = $("admin");
   if (p.style.display === "block") { p.style.display = "none"; return; }
   if (!isAdmin) {
+    if (!META || !META.adminEmail) return alert("이 학교에는 인사담당자 계정이 없습니다. 제작자 콘솔에서 비밀번호를 재발급하세요.");
     const pw = await askPrompt("🛠️ 인사담당자(교감) 비밀번호", {password:true});
     if (pw === null) return;
-    if (!(await checkAdminPw(pw))) return alert("비밀번호가 일치하지 않습니다.");
-    isAdmin = true;
+    try { await auth.signInWithEmailAndPassword(META.adminEmail, pw); }
+    catch(e) { return alert(authMsg(e)); }
+    if (!(await refreshRole())) {
+      await auth.signOut(); await ensureAnon();
+      return alert("이 계정은 이 학교의 관리자 권한이 없습니다.");
+    }
   }
-  setRoleBadge();
   p.style.display = "block";
   openAdminUI();
   render();
@@ -1001,18 +1054,11 @@ function buildEntry(i, prev){
   return e;
 }
 async function submitMyScore(){
-  if (state && state.stage !== 0 && !isAdmin) return alert("점수 입력 기간이 끝나 수정할 수 없습니다. 인사담당자에게 문의하세요.");
-  const a = cfg().access;
-  if (!isAdmin && !a.selfInput) return alert("이 학교는 인사담당자가 점수를 입력합니다.");
-  if (!isAdmin && !$("in-consent").checked) return alert("개인정보 수집·이용 안내를 확인하고 동의란에 체크해 주세요.");
+  if (!isAdmin) return alert("점수·경력은 인사담당자(교감)만 입력·수정할 수 있습니다.");
   const name = $("in-name").value.trim();
   if (!name) return alert("성함을 입력해 주세요.");
   const list = (state && state.teachers) ? [...state.teachers] : [];
   const k = list.findIndex(t => t.name === name);
-  if (!isAdmin && a.requirePin) {
-    if (k < 0) return alert("명단에 없는 이름입니다. 인사담당자에게 문의하세요.");
-    if (!verified.has(name)) return alert("본인 확인(PIN)을 먼저 해 주세요. 위에서 본인 이름을 선택하면 PIN을 묻습니다.");
-  }
   const rawScore = parseFloat($("in-score").value) || 0;
   const schoolCar = parseFloat($("in-school").value) || 0;
   const totalCar = parseFloat($("in-total").value) || 0;
@@ -1183,7 +1229,7 @@ function chooseGrade(g){
     if (t.filter(x => x.grade === g).length >= lim) return alert("그 사이 정원이 마감되었습니다. 다시 선택해 주세요.");
     t[idx] = {...t[idx], grade:g};
     log(`${nm} → 학년 ${g}`);
-    R("draft").update({teachers:t, currentTurn:nextTurn(t, 1, idx + 1)});
+    R().update({["draft/teachers/" + idx + "/grade"]:g, "draft/currentTurn":nextTurn(t, 1, idx + 1)});
   });
 }
 function chooseDuty(name){
@@ -1200,7 +1246,7 @@ function chooseDuty(name){
     if (t.some(x => x.duty === name)) return alert("그 사이 다른 선생님이 선택한 업무입니다. 다시 선택해 주세요.");
     t[idx] = {...t[idx], duty:name};
     log(`${nm} → 업무 ${name}`);
-    R("draft").update({teachers:t, currentTurn:nextTurn(t, 2, idx + 1)});
+    R().update({["draft/teachers/" + idx + "/duty"]:name, "draft/currentTurn":nextTurn(t, 2, idx + 1)});
   });
 }
 
@@ -1208,8 +1254,7 @@ function chooseDuty(name){
 function render(){
   if (!state) return;
   const teachers = state.teachers || [];
-  $("input-sec").style.display = (state.stage === 0 && (isAdmin || cfg().access.selfInput)) || (isAdmin && state.stage > 0) ? "block" : "none";
-  $("in-consent-wrap").style.display = isAdmin ? "none" : "block";
+  $("input-sec").style.display = isAdmin ? "block" : "none";
 
   const sel = document.getElementById("user-select"), prev = myName || sel.value;
   sel.innerHTML = `<option value="">-- 본인 성함 선택 --</option>`;
@@ -1381,10 +1426,6 @@ const te = new TextEncoder();
 const b64 = buf => { let s = ""; new Uint8Array(buf).forEach(x => s += String.fromCharCode(x)); return btoa(s); };
 const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 const rndSalt = () => b64(crypto.getRandomValues(new Uint8Array(16)));
-async function pbkdf2Bits(pw, saltB64){
-  const k = await crypto.subtle.importKey("raw", te.encode(pw), "PBKDF2", false, ["deriveBits"]);
-  return b64(await crypto.subtle.deriveBits({name:"PBKDF2", salt:unb64(saltB64), iterations:120000, hash:"SHA-256"}, k, 256));
-}
 async function sha256hex(s){
   const d = new Uint8Array(await crypto.subtle.digest("SHA-256", te.encode(s)));
   return [...d].map(x => x.toString(16).padStart(2, "0")).join("");
@@ -1493,56 +1534,84 @@ async function purgeAll(){
 }
 
 /* ---------- 학교 입장 / 나가기 ---------- */
-async function enterSchool(code, asCreator){
+async function enterSchool(code){
   code = (code || "").trim().toLowerCase();
   const msg = $("land-msg");
   if (!/^[a-z0-9]{6,24}$/.test(code)) { msg.textContent = "학교 코드 형식이 올바르지 않아요."; return false; }
+  await ensureAnon();
   let m;
   try { m = (await db.ref("schools/" + code + "/meta").once("value")).val(); }
-  catch(e) { msg.textContent = "연결할 수 없어요. 인터넷 연결과 서버 설정을 확인해 주세요."; return false; }
+  catch(e) { msg.textContent = "연결할 수 없어요. 인터넷 연결을 확인하거나 인사담당자에게 문의하세요."; return false; }
   if (!m) { msg.textContent = "등록되지 않은 학교 코드입니다."; return false; }
   detachAll();
-  SID = code; META = m; isAdmin = !!asCreator; isCreator = !!asCreator; verified.clear(); myName = "";
+  SID = code; META = m; isAdmin = false; isCreator = false; verified.clear(); myName = "";
   try { localStorage.setItem("solomonSchool", code); } catch(e) {}
   $("landing").classList.add("hide"); $("creator").classList.add("hide"); $("app").classList.remove("hide");
   $("admin").style.display = "none"; $("school-title").textContent = m.name + " 학년·업무 배정";
-  setRoleBadge(); fillInputControls(); attachSchool();
+  await refreshRole();
+  fillInputControls(); attachSchool();
   return true;
 }
-function leaveSchool(){
+async function leaveSchool(){
   detachAll(); SID = ""; META = null; isAdmin = false; isCreator = false; myName = "";
   try { localStorage.removeItem("solomonSchool"); } catch(e) {}
   try { history.replaceState(null, "", location.pathname); } catch(e) {}
   $("app").classList.add("hide"); $("creator").classList.add("hide"); $("landing").classList.remove("hide");
   $("land-msg").textContent = "";
+  try { await auth.signOut(); } catch(e) {}
+  await ensureAnon();
 }
 async function enterFromLanding(){ const ok = await enterSchool($("land-code").value); if (ok) { try { history.replaceState(null, "", "?s=" + SID); } catch(e) {} } }
 function showLanding(code){ $("landing").classList.remove("hide"); if (code) $("land-code").value = code; }
 
 /* ---------- 제작자 콘솔 (학교 만들기·비밀번호 발급) ---------- */
-let PLAT = null, CREG = null, CPW = "";
+let PLAT = null, CREG = null, CPW = "", SECAPP = null;
+const validEmail = s => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 async function openCreator(){
   if (!(window.crypto && crypto.subtle)) return alert("이 브라우저에서는 암호 기능을 쓸 수 없습니다. https 주소(또는 최신 크롬)에서 열어 주세요.");
-  let snap;
-  try { snap = await db.ref("platform").once("value"); } catch(e) { return alert("서버에 연결할 수 없습니다. Firebase 규칙·인터넷 연결을 확인하세요."); }
-  PLAT = snap.val();
-  if (!PLAT) {
-    const p1 = await askPrompt("🔧 제작자 비밀번호를 처음 만듭니다.<br><small>8자 이상 · 잊으면 복구할 수 없습니다</small>", {password:true}); if (p1 === null) return;
-    if (p1.length < 8) return alert("8자 이상으로 만들어 주세요.");
-    const p2 = await askPrompt("한 번 더 입력해 주세요.", {password:true}); if (p1 !== p2) return alert("두 번 입력한 비밀번호가 다릅니다.");
-    const salt = rndSalt(), box = await encJSON({schools:[]}, p1, salt);
-    await db.ref("platform").set({salt, ...box, v:1});
-    PLAT = {salt, ...box}; CPW = p1; CREG = {schools:[]};
-  } else {
-    const pw = await askPrompt("🔧 제작자 비밀번호", {password:true}); if (pw === null) return;
-    try { CREG = await decJSON(PLAT, pw, PLAT.salt); CPW = pw; } catch(e) { return alert("비밀번호가 틀렸습니다."); }
+  if (!(await ensureAnon())) return alert("보안 로그인을 시작하지 못했습니다. Firebase 콘솔에서 '익명' 로그인을 켰는지 확인하세요.");
+  let first = false;
+  try { first = !(await db.ref("platform/initialized").once("value")).exists(); } catch(e) { return alert("서버에 연결하지 못했습니다. Firebase 규칙·인터넷 연결을 확인하세요."); }
+  const email = ((await askPrompt(first ? "🔧 제작자 계정을 처음 만듭니다.<br>사용할 <b>이메일</b>을 입력하세요" : "🔧 제작자 이메일", {ph:"you@example.com", yes:"다음"})) || "").trim();
+  if (!email) return;
+  if (!validEmail(email)) return alert("이메일 형식이 올바르지 않습니다.");
+  try {
+    if (first) {
+      const p1 = await askPrompt("제작자 비밀번호 (12자 이상 권장, 최소 8자)<br><small>잊으면 학교 목록을 복구할 수 없습니다</small>", {password:true}); if (p1 === null) return;
+      if (p1.length < 8) return alert("8자 이상으로 만들어 주세요.");
+      const p2 = await askPrompt("한 번 더 입력해 주세요.", {password:true}); if (p1 !== p2) return alert("두 번 입력한 비밀번호가 다릅니다.");
+      const cred = await auth.createUserWithEmailAndPassword(email, p1);
+      await db.ref("platform/creators/" + cred.user.uid).set(true);   // 첫 사람만 등록 가능(서버 규칙)
+      const salt = rndSalt(), box = await encJSON({schools:[]}, p1, salt);
+      await db.ref("platform/registry").set({salt, ...box});
+      await db.ref("platform/initialized").set(true);
+      PLAT = {salt, ...box}; CPW = p1; CREG = {schools:[]};
+    } else {
+      const pw = await askPrompt("🔧 제작자 비밀번호", {password:true}); if (pw === null) return;
+      const cred = await auth.signInWithEmailAndPassword(email, pw);
+      let isC = false;
+      try { isC = (await db.ref("platform/creators/" + cred.user.uid).once("value")).exists(); } catch(e) {}
+      if (!isC) { await auth.signOut(); await ensureAnon(); return alert("제작자 계정이 아닙니다."); }
+      PLAT = (await db.ref("platform/registry").once("value")).val();
+      if (!PLAT) return alert("학교 목록을 찾을 수 없습니다.");
+      CREG = await decJSON(PLAT, pw, PLAT.salt); CPW = pw;
+    }
+  } catch(e) {
+    try { if (auth.currentUser && auth.currentUser.isAnonymous === false && !CREG) { await auth.signOut(); await ensureAnon(); } } catch(x) {}
+    return alert(first && e && e.code === "PERMISSION_DENIED" ? "이미 제작자가 등록되어 있습니다. [제작자 로그인]을 쓰세요." : (e && e.code === "PERMISSION_DENIED" ? "권한이 없습니다. Firebase 규칙을 확인하세요." : authMsg(e)));
   }
+  isCreator = true;
   $("landing").classList.add("hide"); $("app").classList.add("hide"); $("creator").classList.remove("hide");
   $("fb-rules").value = FB_RULES;
   renderCreator();
 }
-function closeCreator(){ CREG = null; CPW = ""; $("creator").classList.add("hide"); $("landing").classList.remove("hide"); }
-async function saveReg(){ const box = await encJSON(CREG, CPW, PLAT.salt); await db.ref("platform").update(box); PLAT = {...PLAT, ...box}; }
+async function closeCreator(){
+  CREG = null; CPW = ""; isCreator = false; isAdmin = false;
+  $("creator").classList.add("hide"); $("landing").classList.remove("hide");
+  try { await auth.signOut(); } catch(e) {}
+  await ensureAnon();
+}
+async function saveReg(){ const box = await encJSON(CREG, CPW, PLAT.salt); await db.ref("platform/registry").update(box); PLAT = {...PLAT, ...box}; }
 const schoolLink = code => location.origin + location.pathname + "?s=" + code;
 function renderCreator(){
   const L = CREG.schools || [];
@@ -1556,31 +1625,44 @@ function renderCreator(){
 function showIssued(name, code, pw){
   const box = $("cs-result"); box.classList.remove("hide");
   box.innerHTML = `<b>✅ ${esc(name)}</b><br>학교 코드: <code>${esc(code)}</code><br>입장 링크: <code>${esc(schoolLink(code))}</code><br>인사담당자 비밀번호: <code style="font-size:1.05rem">${esc(pw)}</code><br>` +
-    `<small style="color:#c62828">⚠️ 비밀번호는 지금 한 번만 보입니다. 교감선생님께 전달하고, 교감선생님이 [관리자 → 보안·개인정보]에서 바꾸도록 안내하세요. 교사들에게는 <b>입장 링크(또는 코드)만</b> 알려 주세요.</small>`;
+    `<small style="color:#c62828">⚠️ 비밀번호는 지금 한 번만 보입니다. 교감선생님께 따로 전달하고, [관리자 → 보안·개인정보]에서 바꾸도록 안내하세요. 교사들에게는 <b>입장 링크(또는 코드)만</b> 알려 주세요.</small>`;
+}
+// 인사담당자 계정 만들기 (제작자 로그인이 풀리지 않도록 별도 연결로 생성)
+async function makeAdminAccount(pw){
+  const sec = SECAPP || (SECAPP = firebase.initializeApp(firebaseConfig, "sec"));
+  const email = "adm" + randFrom("abcdefghjkmnpqrstuvwxyz23456789", 10) + "@solomon.invalid";
+  const cred = await sec.auth().createUserWithEmailAndPassword(email, pw);
+  const uid = cred.user.uid; await sec.auth().signOut();
+  return {email, uid};
 }
 async function createSchool(){
   const name = $("cs-name").value.trim(); if (!name) return alert("학교 이름을 입력하세요.");
   const pw = $("cs-pw").value.trim() || genPw();
   if (pw.length < 6) return alert("비밀번호는 6자 이상으로 해 주세요.");
   const tp = $("cs-tpl").value, T = TEMPLATES[tp] || TEMPLATES.blank;
-  let code = genCode();
-  while ((await db.ref("schools/" + code + "/meta").once("value")).val()) code = genCode();
-  const salt = rndSalt(), hash = await pbkdf2Bits(pw, salt);
-  await db.ref("schools/" + code).set(clone({
-    meta:{name, salt, hash, createdAt:Date.now(), template:tp, v:3},
-    config:T.cfg,
-    draft:{stage:0, currentTurn:0, priorityConfirmed:false, naesinPolicy:"LAST", gradeLimits:T.gradeLimits, duties:T.duties, priorityRules:T.rules}
-  }));
-  CREG.schools.push({code, name, createdAt:Date.now(), template:tp}); await saveReg();
-  $("cs-name").value = ""; $("cs-pw").value = "";
-  showIssued(name, code, pw); renderCreator();
+  try {
+    let code = genCode();
+    while ((await db.ref("schools/" + code + "/meta").once("value")).val()) code = genCode();
+    const adm = await makeAdminAccount(pw);
+    await db.ref("schools/" + code).set(clone({
+      meta:{name, adminEmail:adm.email, createdAt:Date.now(), template:tp, v:4},
+      admins:{[adm.uid]:true},
+      config:T.cfg,
+      draft:{stage:0, currentTurn:0, priorityConfirmed:false, naesinPolicy:"LAST", gradeLimits:T.gradeLimits, duties:T.duties, priorityRules:T.rules}
+    }));
+    CREG.schools.push({code, name, createdAt:Date.now(), template:tp}); await saveReg();
+    $("cs-name").value = ""; $("cs-pw").value = "";
+    showIssued(name, code, pw); renderCreator();
+  } catch(e) { alert("학교를 만들지 못했습니다: " + (e && e.code === "PERMISSION_DENIED" ? "권한이 없습니다(Firebase 규칙·제작자 로그인 확인)" : authMsg(e))); }
 }
 async function resetSchoolPw(code){
   const s = CREG.schools.find(x => x.code === code); if (!s) return;
-  if (!confirm(`[${s.name}] 인사담당자 비밀번호를 새로 발급할까요?\n기존 비밀번호는 즉시 쓸 수 없게 됩니다.`)) return;
-  const pw = genPw(), salt = rndSalt(), hash = await pbkdf2Bits(pw, salt);
-  await db.ref("schools/" + code + "/meta").update({salt, hash});
-  showIssued(s.name, code, pw);
+  if (!confirm(`[${s.name}] 인사담당자 비밀번호를 새로 발급할까요?\n기존 비밀번호로는 관리자 권한을 쓸 수 없게 됩니다.`)) return;
+  try {
+    const pw = genPw(), adm = await makeAdminAccount(pw);
+    await db.ref("schools/" + code).update({"meta/adminEmail":adm.email, admins:{[adm.uid]:true}});
+    showIssued(s.name, code, pw);
+  } catch(e) { alert("재발급하지 못했습니다: " + authMsg(e)); }
 }
 async function deleteSchool(code){
   const s = CREG.schools.find(x => x.code === code); if (!s) return;
@@ -1589,39 +1671,67 @@ async function deleteSchool(code){
   await db.ref("schools/" + code).remove();
   CREG.schools = CREG.schools.filter(x => x.code !== code); await saveReg(); renderCreator();
 }
-async function enterAsCreator(code){ const ok = await enterSchool(code, true); if (!ok) alert("학교에 입장하지 못했습니다."); }
+async function enterAsCreator(code){ const ok = await enterSchool(code); if (!ok) alert("학교에 입장하지 못했습니다."); }
 async function importLegacy(code){
   const s = CREG.schools.find(x => x.code === code); if (!s) return;
-  const v = (await db.ref("baegotDraft").once("value")).val();
+  let v; try { v = (await db.ref("baegotDraft").once("value")).val(); } catch(e) { return alert("기존 데이터를 읽을 수 없습니다(권한)."); }
   if (!v) return alert("가져올 기존 배곧초 데이터(baegotDraft)가 없습니다.");
   if (!confirm(`기존 배곧초 앱의 데이터를 [${s.name}]으로 복사합니다.\n· 교원 명단·진행 상태·학년/업무 설정이 덮어씌워집니다.\n· 규정 설정은 '배곧초 규정 템플릿'으로 바뀝니다.\n계속할까요?`)) return;
   await db.ref("schools/" + code).update(clone({draft:v, config:BAEGOT_CFG, "meta/template":"baegot"}));
   alert("가져왔습니다. (기존 baegotDraft 데이터는 그대로 남아 있으니, 확인 후 삭제하세요)");
 }
 async function changeCreatorPw(){
-  const p1 = await askPrompt("새 제작자 비밀번호 (8자 이상)", {password:true}); if (p1 === null) return;
+  const u = auth.currentUser; if (!u || u.isAnonymous) return;
+  const p1 = await askPrompt("새 제작자 비밀번호 (12자 이상 권장, 최소 8자)", {password:true}); if (p1 === null) return;
   if (p1.length < 8) return alert("8자 이상으로 만들어 주세요.");
   const p2 = await askPrompt("한 번 더 입력", {password:true}); if (p1 !== p2) return alert("두 번 입력이 다릅니다.");
-  const salt = rndSalt(); CPW = p1; PLAT.salt = salt;
-  const box = await encJSON(CREG, CPW, salt);
-  await db.ref("platform").update({salt, ...box}); PLAT = {...PLAT, ...box};
-  alert("제작자 비밀번호를 바꿨습니다.");
+  try {
+    await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email, CPW));
+    await u.updatePassword(p1);
+    const salt = rndSalt(), box = await encJSON(CREG, p1, salt);
+    await db.ref("platform/registry").set({salt, ...box}); PLAT = {salt, ...box}; CPW = p1;
+    alert("제작자 비밀번호를 바꿨습니다.");
+  } catch(e) { alert(authMsg(e)); }
 }
 function downloadReg(){ fileDownload(JSON.stringify(CREG, null, 1), "솔로몬_학교목록_" + Date.now() + ".json"); alert("학교 코드가 들어 있는 파일입니다. 안전한 곳에만 보관하세요."); }
-const FB_RULES = `{
-  "rules": {
-    ".read": false,
-    ".write": false,
-    "platform": { ".read": true, ".write": true },
-    "schools": {
-      ".read": false,
-      "$schoolId": { ".read": true, ".write": true }
+
+/* ---------- Firebase 보안 규칙 (콘솔 → Realtime Database → 규칙에 붙여넣기) ---------- */
+function buildRules(){
+  const A = "auth != null";
+  const creator = A + " && root.child('platform/creators/' + auth.uid).exists()";
+  const admin = A + " && (root.child('platform/creators/' + auth.uid).exists() || root.child('schools/' + $sid + '/admins/' + auth.uid).exists())";
+  const stage = "root.child('schools/' + $sid + '/draft/stage').val()";
+  const emptyCell = "(!data.exists() || data.val() === '') && newData.isString() && newData.val() !== '' && newData.val().length <= 60";
+  return JSON.stringify({rules:{
+    ".read":false, ".write":false,
+    platform:{
+      creators:{"$uid":{".read":A + " && auth.uid === $uid", ".write":A + " && auth.uid === $uid && !root.child('platform/creators').exists()"}},
+      initialized:{".read":A, ".write":A + " && !data.exists() && root.child('platform/creators/' + auth.uid).exists()"},
+      registry:{".read":creator, ".write":creator}
     },
-    "baegotDraft":   { ".read": true, ".write": true },
-    "baegotLog":     { ".read": true, ".write": true },
-    "baegotBackups": { ".read": true, ".write": true }
-  }
-}`;
+    schools:{
+      ".read":false,
+      "$sid":{
+        ".read":A,
+        ".write":creator,
+        meta:{".write":admin}, config:{".write":admin}, backups:{".write":admin},
+        log:{".write":admin, "$id":{".write":A + " && !data.exists() && newData.exists()"}},
+        draft:{
+          ".write":admin,
+          currentTurn:{".write":A + " && newData.isNumber() && newData.val() >= data.val() && " + stage + " > 0"},
+          teachers:{"$i":{
+            grade:{".write":A + " && " + stage + " === 1 && " + emptyCell},
+            duty:{".write":A + " && " + stage + " === 2 && " + emptyCell}
+          }}
+        }
+      }
+    },
+    baegotDraft:{".read":creator, ".write":false},
+    baegotLog:{".read":creator, ".write":false},
+    baegotBackups:{".read":creator, ".write":false}
+  }}, null, 2);
+}
+const FB_RULES = buildRules();
 
 /* ---------- 규정 마법사: 규정 PDF 읽기 · 조항 찾기 ---------- */
 let WZ = null, REGTXT = "", REGTAG = "";
@@ -1956,24 +2066,27 @@ async function applyWiz(){
 function fillSecurity(){
   const c = cfg(), a = c.access;
   $("sc-code").textContent = SID; $("sc-link").textContent = schoolLink(SID);
-  $("sc-self").checked = !!a.selfInput; $("sc-pin").checked = !!a.requirePin; $("sc-vis").value = a.scoreVisibility || "all";
+  $("sc-pin").checked = !!a.requirePin; $("sc-vis").value = a.scoreVisibility || "all";
   $("sc-notice").value = c.privacyNotice; $("sc-keep").value = c.retentionDays;
   $("sc-oldpw-wrap").classList.toggle("hide", isCreator);
 }
 async function saveAccess(){
   const keep = parseInt($("sc-keep").value);
   if (!(keep >= 0 && keep <= 3650)) return alert("보관 기간은 0~3650일로 입력하세요. (0 = 자동 삭제 안 함)");
-  await R("config").update({access:{selfInput:$("sc-self").checked, requirePin:$("sc-pin").checked, scoreVisibility:$("sc-vis").value}, privacyNotice:$("sc-notice").value, retentionDays:keep});
+  await R("config").update({access:{selfInput:false, requirePin:$("sc-pin").checked, scoreVisibility:$("sc-vis").value}, privacyNotice:$("sc-notice").value, retentionDays:keep});
   log("[관리자] 접근·개인정보 설정 변경");
   alert("저장했습니다.");
 }
 async function changeAdminPw(){
+  const u = auth.currentUser;
+  if (!u || u.isAnonymous || isCreator) return alert("이 학교 인사담당자 계정으로 로그인했을 때만 바꿀 수 있습니다. (제작자는 제작자 콘솔에서 [비밀번호 재발급])");
   const o = $("sc-old").value, n1 = $("sc-new").value, n2 = $("sc-new2").value;
-  if (!isCreator && !(await checkAdminPw(o))) return alert("현재 비밀번호가 맞지 않습니다.");
-  if (n1.length < 6) return alert("새 비밀번호는 6자 이상으로 해 주세요.");
+  if (n1.length < 6) return alert("새 비밀번호는 6자 이상으로 해 주세요. (12자 이상 권장)");
   if (n1 !== n2) return alert("새 비밀번호 두 칸이 다릅니다.");
-  const salt = rndSalt(), hash = await pbkdf2Bits(n1, salt);
-  await R("meta").update({salt, hash});
+  try {
+    await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email, o));
+    await u.updatePassword(n1);
+  } catch(e) { return alert(authMsg(e)); }
   $("sc-old").value = $("sc-new").value = $("sc-new2").value = "";
   log("[관리자] 비밀번호 변경");
   alert("✅ 비밀번호를 바꿨습니다. 다음 접속부터 새 비밀번호를 쓰세요.");
@@ -2087,16 +2200,151 @@ function bulkDuties(){
 /* ---------- 관리자 화면 열기 / 시작 ---------- */
 function openAdminUI(){
   purgeOld();
+  setupAdminTabs();
   WZ = wzFromCfg(); renderWiz(); renderRegTags(); renderRegHits(); fillSecurity(); renderAdmin();
   $("wz-preset").innerHTML = '<option value="">불러올 템플릿 선택…</option>' + Object.entries(PRESETS).map(([k, p]) => `<option value="${k}">${esc(p.label)}</option>`).join("");
+  $("fb-rules").value = FB_RULES;
 }
-(function boot(){
+(async function boot(){
+  await startAuth();
   let code = null;
   try { code = new URLSearchParams(location.search).get("s"); } catch(e) {}
   if (!code) { try { code = localStorage.getItem("solomonSchool"); } catch(e) {} }
-  if (code) enterSchool(code).then(ok => { if (!ok) showLanding(code); });
+  if (code) { const ok = await enterSchool(code); if (!ok) showLanding(code); }
   else showLanding();
 })();
+
+/* ---------- 업무분장표 → 업무 목록 자동 만들기 ---------- */
+let DI = {rows:[], col:0, names:[]};
+function diParseRows(text){
+  const lines = text.replace(/\r/g, "").split("\n").filter(l => l.trim());
+  const tab = lines.some(l => l.includes("\t"));
+  const csv = !tab && lines.length > 1 && lines.filter(l => l.includes(",")).length >= lines.length * 0.8 && lines.every(l => (l.match(/,/g) || []).length === (lines[0].match(/,/g) || []).length);
+  const splitCsv = l => { const o = []; let c = "", q = false; for (const ch of l) { if (ch === '"') q = !q; else if (ch === "," && !q) { o.push(c); c = ""; } else c += ch; } o.push(c); return o; };
+  return lines.map(l => (tab ? l.split("\t") : csv ? splitCsv(l) : [l]).map(c => c.trim().replace(/^"|"$/g, "")));
+}
+function diCleanName(s){
+  return s.replace(/^[\s·•\-▪●■•]*(?:\d{1,3}[.)\]]|[①-⑳]|\(\d{1,3}\))?\s*/, "").replace(/\s+/g, " ").trim();
+}
+function diAnalyze(){
+  const text = $("di-text").value, rows = diParseRows(text);
+  const width = Math.max(0, ...rows.map(r => r.length));
+  let hdr = -1, col = -1;
+  for (let i = 0; i < Math.min(6, rows.length) && col < 0; i++) rows[i].forEach((c, j) => { if (col < 0 && /^(업무명?|담당\s*업무|분장\s*업무|업무\s*내용|업무\s*분장)$/.test(c.replace(/\s/g, ""))) { col = j; hdr = i; } });
+  if (col < 0 && width > 1) { // 머리말이 없으면 글자가 가장 긴(이름·숫자가 아닌) 열
+    let best = -1;
+    for (let j = 0; j < width; j++) { const v = rows.map(r => r[j] || "").filter(x => x && !/^[\d.\s]+$/.test(x)); const sc = v.length ? v.reduce((a, b) => a + b.length, 0) / v.length * Math.min(v.length, 10) : 0; if (sc > best) { best = sc; col = j; } }
+  }
+  if (col < 0) col = 0;
+  DI = {rows, col, hdr, width};
+  diRender();
+}
+function diColumnPick(){ DI.col = +$("di-col").value; diRender(true); }
+function diRender(keepCol){
+  const box = $("di-preview"); if (!DI.rows || !DI.rows.length) { box.innerHTML = ""; return; }
+  let h = "";
+  if (DI.width > 1) {
+    h += `<div class="row" style="margin:6px 0"><label style="font-size:.85rem;font-weight:700">업무 이름이 들어 있는 열:</label><select id="di-col" class="inp" onchange="diColumnPick()">` +
+      Array.from({length:DI.width}, (_, j) => `<option value="${j}"${j === DI.col ? " selected" : ""}>${j + 1}열 — ${esc((DI.rows.slice(DI.hdr >= 0 ? DI.hdr : 0, 4).map(r => r[j] || "").filter(Boolean).join(" / ")).slice(0, 36))}</option>`).join("") + `</select></div>`;
+  }
+  const seen = new Set(), names = [];
+  DI.rows.forEach((r, i) => {
+    if (i <= (DI.hdr == null ? -1 : DI.hdr)) return;
+    const n = diCleanName(r[DI.col] || ""); if (n.length < 2 || n.length > 40 || /^[\d.\s]+$/.test(n) || seen.has(n)) return; seen.add(n); names.push(n);
+  });
+  DI.names = names;
+  const cur = new Set(getDuties().map(d => d.name));
+  h += `<p class="note" style="margin:6px 0">찾은 업무 <b>${names.length}개</b> — 틀린 것은 이름을 고치거나 체크를 해제하세요. 이름 앞에 <code>(전담)</code>을 붙이면 전담교사 업무, <code>(3,4담임)</code>은 3·4학년 담임 업무, 끝에 <code>*</code>를 붙이면 필수 업무입니다.</p>`;
+  h += `<div class="di-list">` + names.map((n, i) => `<div class="di-row"><input type="checkbox" checked data-i="${i}" class="di-chk"><input class="inp di-nm" data-i="${i}" value="${esc(n)}">${cur.has(n) ? '<small style="color:#888">이미 있음</small>' : ""}</div>`).join("") + `</div>`;
+  h += `<div class="btns"><label class="chk"><input type="radio" name="di-mode" value="add" checked> 기존 목록에 추가</label><label class="chk"><input type="radio" name="di-mode" value="replace"> 기존 목록을 이 목록으로 교체</label>` +
+       `<button class="btn" onclick="diApply()">✅ 업무 목록에 반영</button></div>`;
+  box.innerHTML = h;
+}
+function diApply(){
+  const picked = [...document.querySelectorAll("#di-preview .di-row")].filter(r => r.querySelector(".di-chk").checked).map(r => r.querySelector(".di-nm").value.trim()).filter(Boolean);
+  if (!picked.length) return alert("반영할 업무가 없습니다.");
+  const replace = (document.querySelector('input[name="di-mode"]:checked') || {}).value === "replace";
+  if (replace && state && state.stage === 2 && !confirm("2단계(업무 선택) 진행 중입니다. 업무 목록을 교체하면 이미 선택된 업무와 맞지 않을 수 있어요. 계속할까요?")) return;
+  if (replace && !confirm(`기존 업무 목록을 지우고 ${picked.length}개로 교체합니다. 계속할까요?`)) return;
+  const groups = getGroups(), prev = replace ? [] : getDuties(), old = getDuties();
+  let add = 0;
+  picked.forEach(raw => {
+    const must = raw.endsWith("*"), name = raw.replace(/\*+$/, "").trim();
+    if (!name || prev.some(d => d.name === name)) return;
+    const o = old.find(d => d.name === name), d = {name, grades:[], must};
+    d.grades = o && replace ? o.grades : groups.filter(g => applicable(d, g));
+    prev.push(d); add++;
+  });
+  if (!add) return alert("새로 추가할 업무가 없습니다. (이미 있는 이름은 건너뜁니다)");
+  log(`[관리자] 업무분장표로 업무 ${replace ? "교체" : "추가"} ${add}개`);
+  saveDuties(prev).then(() => { alert(`✅ 업무 ${add}개를 반영했습니다. 아래 [업무 목록]에서 학년별 선택 가능 여부를 확인하세요.`); $("di-text").value = ""; $("di-preview").innerHTML = ""; });
+}
+async function diFile(file){
+  if (!file) return; const st = $("di-status"); const ext = (file.name.split(".").pop() || "").toLowerCase();
+  st.textContent = "파일을 읽는 중…";
+  try {
+    let text = "";
+    if (ext === "csv" || ext === "txt" || ext === "tsv") {
+      const buf = await file.arrayBuffer(); text = new TextDecoder("utf-8").decode(buf);
+      if (text.includes("�")) { try { text = new TextDecoder("euc-kr").decode(buf); } catch(e) {} }
+    } else if (ext === "xlsx" || ext === "xls") {
+      if (!window.XLSX) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js");
+      const wb = XLSX.read(await file.arrayBuffer(), {type:"array"});
+      text = wb.SheetNames.map(n => XLSX.utils.sheet_to_csv(wb.Sheets[n], {FS:"\t"})).join("\n");
+    } else if (ext === "pdf") {
+      if (!window.pdfjsLib) { await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"); pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"; }
+      const doc = await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise, out = [];
+      for (let p = 1; p <= Math.min(doc.numPages, 50); p++) {
+        const tc = await (await doc.getPage(p)).getTextContent(); let line = "", lastY = null;
+        tc.items.forEach(it => { const y = it.transform ? it.transform[5] : 0; if (lastY !== null && Math.abs(y - lastY) > 2) { out.push(line); line = ""; } line += it.str + (it.hasEOL ? "" : "\t"); lastY = y; });
+        out.push(line);
+      }
+      text = out.join("\n").replace(/\t+/g, "\t").replace(/\t$/gm, "");
+    } else { st.innerHTML = "⚠️ 이 파일 형식은 읽을 수 없습니다. <b>한글(hwp)·워드 파일은 표를 복사(Ctrl+C)해서 아래 칸에 붙여넣어 주세요.</b>"; return; }
+    if (text.replace(/\s/g, "").length < 4) { st.textContent = "⚠️ 글자를 읽지 못했습니다. 표를 복사해서 아래 칸에 붙여넣어 주세요."; return; }
+    $("di-text").value = text; st.textContent = `✅ ${file.name} 을(를) 읽었습니다. 아래에서 확인하세요.`; diAnalyze();
+  } catch(e) { st.textContent = "⚠️ 파일을 읽지 못했습니다(" + (e.message || e) + "). 표를 복사해서 아래 칸에 붙여넣어 주세요."; }
+}
+
+/* ---------- 관리자 제어판: 탭으로 나누기 ---------- */
+const ADMIN_TABS = [
+  {id:"prep", label:"① 학교 준비", help:"<b>새 학년도 시작 전에 한 번만</b> 하세요. 규정(순위 방식) → 학년 정원 → 업무 목록 순서입니다. 업무분장표가 있으면 [업무분장표로 업무 목록 자동 만들기]를 쓰세요."},
+  {id:"people", label:"② 명단·우대", help:"교원 명단은 맨 위 [점수·경력 입력]에서 한 명씩 또는 [여러 명 한꺼번에]로 등록합니다. 여기서는 <b>배정우대 대상자</b>를 체크하고 순위를 확인한 뒤 최종 확인 체크를 합니다."},
+  {id:"run", label:"③ 진행", help:"<b>0단계(점수 입력) → ① 학년 배정 → ② 업무 배정</b> 순서로 버튼을 누릅니다. 시작 전에 자동 백업됩니다."},
+  {id:"fix", label:"④ 수정·복구", help:"이의제기·실수에 대응하는 곳입니다. 배정 수정, 백업 복원, 변경 기록을 볼 수 있습니다."},
+  {id:"sec", label:"⑤ 보안·설정", help:"비밀번호 변경, 점수 공개 범위, 개인정보 보관기간을 정합니다."}
+];
+function adminTabOf(c){
+  const t = c.textContent;
+  if (c.id === "wiz-card" || c.id === "di-card" || /학년·전담 정원|업무 목록/.test(t.slice(0, 80))) return "prep";
+  if (c.id === "sec-card") return "sec";
+  if (/배정우대 관리/.test(t.slice(0, 60))) return "people";
+  if (/단계 전환/.test(t.slice(0, 40))) return "run";
+  if (/사후 수정/.test(t.slice(0, 40))) return "fix";
+  return "prep";
+}
+function showAdminTab(id){
+  document.querySelectorAll("#admin-tabs button").forEach(b => b.classList.toggle("on", b.dataset.t === id));
+  document.querySelectorAll("#admin > [data-tab]").forEach(c => c.classList.toggle("tab-hide", c.dataset.tab !== id));
+  const t = ADMIN_TABS.find(x => x.id === id); $("admin-help").innerHTML = t ? t.help : "";
+  try { sessionStorage.setItem("solomonTab", id); } catch(e) {}
+}
+function setupAdminTabs(){
+  const adm = $("admin"); if ($("admin-tabs")) return;
+  const cards = [...adm.children].filter(c => c.classList.contains("cfg"));
+  const order = ["wiz-card", "grade", "di-card", "duty"];
+  cards.forEach(c => { c.dataset.tab = adminTabOf(c); });
+  const rank = c => c.id === "wiz-card" ? 0 : /학년·전담 정원/.test(c.textContent.slice(0, 60)) ? 1 : c.id === "di-card" ? 2 : 3;
+  const prep = cards.filter(c => c.dataset.tab === "prep").sort((a, b) => rank(a) - rank(b));
+  const anchor = prep.length ? prep[prep.length - 1].nextSibling : null;
+  prep.forEach(c => adm.insertBefore(c, anchor));
+  const bar = document.createElement("div"); bar.id = "admin-tabs"; bar.className = "admin-tabs";
+  bar.innerHTML = ADMIN_TABS.map(t => `<button data-t="${t.id}" onclick="showAdminTab('${t.id}')">${t.label}</button>`).join("");
+  const help = document.createElement("div"); help.id = "admin-help"; help.className = "admin-help";
+  const first = [...adm.children].find(c => c.dataset && c.dataset.tab); adm.insertBefore(bar, first); adm.insertBefore(help, first);
+  let id = "prep"; try { id = sessionStorage.getItem("solomonTab") || "prep"; } catch(e) {}
+  showAdminTab(ADMIN_TABS.some(t => t.id === id) ? id : "prep");
+}
 
 </script>
 </body>
