@@ -115,8 +115,8 @@
   }
   // ===== 통합 의견함: 게임 안에서 바로 쓰고, 선생님 답장도 여기서 받아요 =====
   var API = 'https://bwj-feedback.kimsky4409.workers.dev';
-  var KN = { bug: '🐞 버그 신고', fix: '🔧 오류 수정', idea: '✨ 콘텐츠 요청' };
-  var KH = { bug: '멈추거나, 숫자가 이상하거나, 눌러도 안 될 때', fix: '글자·내용·그림이 틀렸거나 어색할 때', idea: '이런 게 있으면 좋겠다 싶을 때' };
+  var KN = { bug: '🐞 오류 신고', fix: '🔧 내용 수정 요청', idea: '✨ 개선·기능 요청' };
+  var KH = { bug: '화면이 멈추거나, 순위·점수가 이상하거나, 눌러도 안 될 때', fix: '규정 반영·안내 문구·업무 목록 등이 틀렸거나 어색할 때', idea: '이런 기능이 있으면 좋겠다 싶을 때' };
   function ls(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) {} return null; }
   function did() { var d = ls('bwj-did'); if (!d || !/^[a-z0-9]{8,40}$/.test(d)) { var a = new Uint8Array(12); try { crypto.getRandomValues(a); } catch (e) { for (var i = 0; i < 12; i++) a[i] = Math.floor(Math.random() * 256); } d = ''; for (var k = 0; k < 12; k++) d += ('0' + a[k].toString(16)).slice(-2); ls('bwj-did', d); } return d; }
   function api(path, body) {
@@ -135,7 +135,7 @@
     if (document.getElementById('bwj-fb')) return;
     var info = game + (ver ? ' ' + ver : '') + ' / ' + today(), tab = 'w', timer = 0, kind = '';
     var m = el('div', { id: 'bwj-fb' }, '<div class="bx"><h3>💬 의견 보내기 <small>' + game + '</small></h3>' +
-      '<div class="tabs"><button type="button" data-t="w" class="on">✏️ 쓰기</button><button type="button" data-t="m">📬 내 의견<span class="bwjdot2"></span></button><button type="button" data-t="p">👥 친구들 의견</button></div>' +
+      '<div class="tabs"><button type="button" data-t="w" class="on">✏️ 쓰기</button><button type="button" data-t="m">📬 내 의견<span class="bwjdot2"></span></button><button type="button" data-t="p">👥 다른 선생님 의견</button></div>' +
       '<div id="bwjBody"></div><div class="row"><button class="b s" id="bwjX">닫기</button></div></div>');
     document.body.appendChild(m);
     var body = m.querySelector('#bwjBody');
@@ -145,12 +145,12 @@
     m.addEventListener('click', function (e) { if (e.target === m) close(); });
     function tabs() { m.querySelectorAll('.tabs button').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-t') === tab); }); }
     function msg(t, bad) { var x = body.querySelector('.msg'); if (x) { x.textContent = t; x.style.color = bad ? '#ffb3a8' : '#9fb'; } }
-    function fallback() { return '<div class="msg" style="color:#ffd98a">지금은 의견함 서버에 연결할 수 없어요. 잠시 뒤에 다시 열어 주세요.</div>'; }
+    function fallback() { return '<div class="msg" style="color:#ffd98a">지금은 의견함 서버에 연결할 수 없습니다. 잠시 뒤에 다시 열어 주세요.</div>'; }
     function wireCopy() {}
     function viewW() {
       body.innerHTML = '<div class="lbl">어떤 내용인가요?</div><div class="kinds">' + Object.keys(KN).map(function (k) { return '<button type="button" data-k="' + k + '" class="kd' + (k === kind ? ' on' : '') + '"><b>' + KN[k] + '</b><span>' + KH[k] + '</span></button>'; }).join('') + '</div>' +
-        '<div class="lbl">무슨 일인가요?</div><textarea id="bwjTx" maxlength="500" placeholder="어디에서 무엇을 하다가 어떻게 됐는지 알려 주세요. 원하는 내용이면 그대로 적어 주세요."></textarea>' +
-        '<div class="sm"><span id="bwjN">0/500</span> · ⚠ 전화번호·이메일·주소는 쓰지 마세요 (자동으로 막혀요). 교사 이름·점수·비밀번호도 적지 마세요. 비밀번호 분실은 지역·학교 이름만 적어 주세요.</div>' +
+        '<div class="lbl">자세한 내용을 적어 주세요</div><textarea id="bwjTx" maxlength="500" placeholder="어느 화면에서 무엇을 하다가 어떻게 되었는지, 또는 바라는 점을 적어 주세요. 학교 이름은 적어도 되지만 교사 이름·점수·비밀번호는 적지 마세요."></textarea>' +
+        '<div class="sm"><span id="bwjN">0/500</span> · ⚠ 전화번호·이메일·주소는 자동으로 차단됩니다. 교사 이름·점수·비밀번호는 적지 마세요. 비밀번호 분실은 첫 화면의 [🔑 비밀번호 분실 신청]을 이용해 주세요.</div>' +
         '<div class="row"><button type="button" class="b" id="bwjSend" disabled>보내기</button></div><div class="msg"></div>';
       var tx = body.querySelector('#bwjTx'), sd = body.querySelector('#bwjSend');
       function chk() { body.querySelector('#bwjN').textContent = tx.value.length + '/500'; sd.disabled = !(kind && tx.value.trim().length >= 5); }
@@ -159,27 +159,27 @@
       sd.onclick = function () {
         sd.disabled = true; msg('보내는 중…');
         api('/api/post', { game: game, ver: ver || '', kind: kind, text: tx.value, did: did() }).then(function (j) {
-          ls('bwj-posted', '1'); kind = ''; body.innerHTML = '<div class="ok">✅ 보냈어요! 고마워요 😊<br><small>선생님이 읽고 답장할 수 있어요. 답장이 오면 이 버튼에 빨간 점이 떠요. 오늘 ' + j.left + '번 더 보낼 수 있어요.</small></div><div class="row"><button type="button" class="b s" id="bwjMore">또 쓰기</button><button type="button" class="b s" id="bwjGoM">📬 내 의견 보기</button></div>';
+          ls('bwj-posted', '1'); kind = ''; body.innerHTML = '<div class="ok">✅ 보냈습니다. 감사합니다 😊<br><small>제작자가 읽고 답장할 수 있습니다. 답장은 같은 기기·브라우저의 [내 의견] 탭에서 확인하세요. 오늘 ' + j.left + '번 더 보낼 수 있습니다.</small></div><div class="row"><button type="button" class="b s" id="bwjMore">또 쓰기</button><button type="button" class="b s" id="bwjGoM">📬 내 의견 보기</button></div>';
           body.querySelector('#bwjMore').onclick = function () { tab = 'w'; render(); }; body.querySelector('#bwjGoM').onclick = function () { tab = 'm'; render(); };
         }, function (e) {
           sd.disabled = false;
-          if (e && e.err === 'pii') msg('전화번호·메일·인터넷 주소처럼 보이는 글자가 있어요. 지우고 다시 보내 주세요.', 1);
-          else if (e && e.err === 'limit') msg('오늘은 많이 보냈어요. 내일 또 보내 주세요 😊', 1);
-          else if (e && e.err === 'short') msg('조금만 더 자세히 써 주세요.', 1);
-          else { var q = outbox(); q.push({ game: game, ver: ver || '', kind: kind, text: tx.value, did: did() }); ls('bwj-out', JSON.stringify(q.slice(-5))); kind = ''; body.innerHTML = '<div class="ok">📥 지금은 서버에 연결이 안 돼요.<br><small>쓴 내용은 이 기기에 저장해 뒀어요. 연결되면 자동으로 보낼게요! (저장된 글 ' + Math.min(q.length, 5) + '개)</small></div><div class="row"><button type="button" class="b s" id="bwjMore">닫기</button></div>'; body.querySelector('#bwjMore').onclick = close; }
+          if (e && e.err === 'pii') msg('전화번호·메일·인터넷 주소처럼 보이는 글자가 있습니다. 지우고 다시 보내 주세요.', 1);
+          else if (e && e.err === 'limit') msg('오늘 보낼 수 있는 횟수를 모두 사용했습니다. 내일 다시 보내 주세요.', 1);
+          else if (e && e.err === 'short') msg('조금만 더 자세히 적어 주세요.', 1);
+          else { var q = outbox(); q.push({ game: game, ver: ver || '', kind: kind, text: tx.value, did: did() }); ls('bwj-out', JSON.stringify(q.slice(-5))); kind = ''; body.innerHTML = '<div class="ok">📥 지금은 서버에 연결되지 않았습니다.<br><small>쓴 내용은 이 기기에 저장해 두었고, 연결되면 자동으로 보냅니다. (저장된 글 ' + Math.min(q.length, 5) + '개)</small></div><div class="row"><button type="button" class="b s" id="bwjMore">닫기</button></div>'; body.querySelector('#bwjMore').onclick = close; }
         });
       };
     }
     function card(p, mine) {
       var c = el('div', { class: 'pc' }); var h = el('div', { class: 'ph' }); h.textContent = (KN[p.kind] || '') + ' · ' + ago(p.ts) + (mine ? (p.pub ? ' · 공개 중' : '') : ''); c.appendChild(h);
       var t = el('div', { class: 'pt' }); t.textContent = p.text; c.appendChild(t);
-      if (p.rep) { var r = el('div', { class: 'pr' }); var rh = el('b'); rh.textContent = '👩‍🏫 선생님 답장 '; r.appendChild(rh); r.appendChild(document.createTextNode(p.rep)); c.appendChild(r); } else if (mine) { var w = el('div', { class: 'pw' }); w.textContent = '선생님이 읽고 있어요… (답장이 없을 수도 있어요)'; c.appendChild(w); }
+      if (p.rep) { var r = el('div', { class: 'pr' }); var rh = el('b'); rh.textContent = '👤 제작자 답장 '; r.appendChild(rh); r.appendChild(document.createTextNode(p.rep)); c.appendChild(r); } else if (mine) { var w = el('div', { class: 'pw' }); w.textContent = '제작자가 확인 중입니다… (답장이 없을 수도 있습니다)'; c.appendChild(w); }
       return c;
     }
     function viewM() {
       api('/api/mine?did=' + did()).then(function (j) {
         if (tab !== 'm') return; body.innerHTML = '';
-        if (!j.posts.length) { body.innerHTML = '<div class="sm">아직 보낸 의견이 없어요. 「쓰기」에서 첫 의견을 보내 보세요!</div>'; return; }
+        if (!j.posts.length) { body.innerHTML = '<div class="sm">아직 보낸 의견이 없습니다. 「쓰기」에서 의견을 남겨 주세요.</div>'; return; }
         j.posts.forEach(function (p) { body.appendChild(card(p, true)); }); var mx = 0; j.posts.forEach(function (p) { if (p.repAt > mx) mx = p.repAt; }); ls('bwj-seen', String(mx || Date.now())); setDot(0);
         var d = m.querySelector('.bwjdot2'); if (d) d.textContent = '';
       }, function () { body.innerHTML = fallback(); wireCopy(); });
@@ -187,12 +187,12 @@
     function viewP() {
       api('/api/public?game=' + encodeURIComponent(game) + '&did=' + did()).then(function (j) {
         if (tab !== 'p') return; body.innerHTML = '';
-        if (!j.posts.length) { body.innerHTML = '<div class="sm">아직 공개된 의견이 없어요. 선생님이 고른 의견과 답장이 여기에 올라와요.</div>'; return; }
+        if (!j.posts.length) { body.innerHTML = '<div class="sm">아직 공개된 의견이 없습니다. 제작자가 공개한 의견과 답장이 여기에 올라옵니다.</div>'; return; }
         j.posts.forEach(function (p) {
           var c = card(p, false), r = el('div', { class: 'row pa' });
           var lk = el('button', { type: 'button', class: 'b s lk' }); lk.textContent = (p.liked ? '👍 ' : '👍 ') + p.likes; if (p.liked) lk.classList.add('on');
           lk.onclick = function () { api('/api/like', { id: p.id, did: did() }).then(function (x) { lk.textContent = '👍 ' + x.likes; lk.classList.toggle('on', x.liked); }, function () {}); };
-          var rp = el('button', { type: 'button', class: 'b s rp' }); rp.textContent = '🚩 신고'; rp.onclick = function () { api('/api/report', { id: p.id, did: did() }).then(function () { rp.textContent = '신고했어요'; rp.disabled = true; }, function () {}); };
+          var rp = el('button', { type: 'button', class: 'b s rp' }); rp.textContent = '🚩 신고'; rp.onclick = function () { api('/api/report', { id: p.id, did: did() }).then(function () { rp.textContent = '신고했습니다'; rp.disabled = true; }, function () {}); };
           r.appendChild(lk); r.appendChild(rp); c.appendChild(r); body.appendChild(c);
         });
       }, function () { body.innerHTML = fallback(); wireCopy(); });
@@ -385,6 +385,10 @@ code{background:#eef1f7;padding:1px 7px;border-radius:6px;font-size:.85em;word-b
 .tab-hide{display:none!important}
 .admin-help{background:#eef5ff;border:1px solid #c9dcff;border-radius:10px;padding:10px 12px;font-size:.85rem;line-height:1.6;margin-bottom:10px}
 input[type=file]{max-width:100%;min-width:0;font-size:.8rem}
+#reset-ov{position:fixed;inset:0;background:rgba(10,15,30,.55);z-index:100000;display:flex;align-items:center;justify-content:center;padding:14px}
+#reset-ov.hide{display:none}
+.reset-box{background:#fff;border-radius:16px;max-width:460px;width:100%;max-height:92vh;overflow:auto;padding:18px 18px 14px}
+.rr-item{border:1px solid var(--line);border-radius:var(--r-s);padding:10px 12px;margin-bottom:8px}
 </style>
 </head>
 <body>
@@ -405,6 +409,18 @@ input[type=file]{max-width:100%;min-width:0;font-size:.8rem}
 </div>
 
 <div id="auth-warn" class="hide" style="background:#fdecea;color:#b71c1c;padding:10px 14px;font-size:.85rem"></div>
+<div id="reset-ov" class="hide">
+  <div class="reset-box">
+    <h3 style="margin:0 0 6px">🔑 비밀번호 분실 신청</h3>
+    <p class="note" style="margin:0 0 10px;text-align:left">인사담당자(교감) 비밀번호를 잊으셨을 때 신청합니다. 제작자가 <b>본인 확인</b>을 한 뒤, 새 비밀번호를 아래 <b>공직자통합메일</b>로 보내 드립니다.</p>
+    <div class="row"><select id="rs-sido" class="inp"><option value="">시·도</option><option>서울</option><option>부산</option><option>대구</option><option>인천</option><option>광주</option><option>대전</option><option>울산</option><option>세종</option><option>경기</option><option>강원</option><option>충북</option><option>충남</option><option>전북</option><option>전남</option><option>경북</option><option>경남</option><option>제주</option></select><input id="rs-sigungu" class="inp" placeholder="시·군·구 (예: 시흥)" style="flex:1;min-width:120px"></div>
+    <input id="rs-school" class="inp" placeholder="학교 이름 (예: 배곧초등학교)" style="width:100%;margin-top:8px">
+    <input id="rs-email" class="inp" type="email" inputmode="email" autocomplete="off" placeholder="공직자통합메일 주소" style="width:100%;margin-top:8px">
+    <label class="chk" style="margin-top:8px;display:flex;gap:8px;align-items:flex-start"><input type="checkbox" id="rs-ok" style="width:20px;height:20px;flex:none"> <span style="font-size:.82rem;line-height:1.5;text-align:left">입력한 메일 주소는 비밀번호 안내에만 쓰이고 처리 후 삭제됨을 확인했으며, 이 주소로 새 비밀번호가 발송되는 것에 동의합니다.</span></label>
+    <div id="rs-msg" class="note" style="margin-top:6px;color:#c62828;text-align:left"></div>
+    <div class="btns" style="justify-content:flex-end"><button class="btn sm ghost" onclick="closeResetForm()">닫기</button><button class="btn sm" onclick="submitResetRequest()">신청하기</button></div>
+  </div>
+</div>
 <!-- 학교 입장 -->
 <div id="landing" class="land hide">
   <div class="card" style="text-align:center">
@@ -417,8 +433,8 @@ input[type=file]{max-width:100%;min-width:0;font-size:.8rem}
     <hr style="border:none;border-top:1px dashed var(--line);margin:16px 0">
     <button class="btn sm ghost" onclick="openCreator()">🔧 제작자 콘솔 (학교 만들기)</button>
     <hr style="border:none;border-top:1px dashed var(--line);margin:16px 0">
-    <button class="btn sm ghost" onclick="openFeedback()">💬 의견·문의 (비밀번호 분실·개선 요청)</button>
-    <p class="note" style="margin-top:6px;text-align:left">비밀번호를 잊으셨거나 불편한 점·바라는 점이 있으면 남겨 주세요. 비밀번호 분실은 <b>지역·학교 이름</b>을 적어 주시면 제작자가 확인 후 안내합니다. 답장은 <b>같은 기기·브라우저</b>의 [내 의견]에서 볼 수 있습니다. 교사 이름·점수 같은 <b>개인정보와 비밀번호는 쓰지 마세요.</b></p>
+    <div class="btns" style="justify-content:center"><button class="btn sm ghost" onclick="openResetForm()">🔑 비밀번호 분실 신청</button><button class="btn sm ghost" onclick="openFeedback()">💬 의견·문의</button></div>
+    <p class="note" style="margin-top:6px;text-align:left"><b>비밀번호를 잊으셨나요?</b> [비밀번호 분실 신청]에 학교와 <b>공직자통합메일 주소</b>를 남기면, 제작자가 본인 확인 후 새 비밀번호를 그 메일로 보내 드립니다. 불편한 점이나 바라는 점은 [의견·문의]에 남겨 주세요. (교사 이름·점수·비밀번호는 적지 마세요)</p>
   </div>
   <p class="note" style="text-align:center"><a class="creator-a" href="https://share.google/E6KnxiO3cvul0TeW5" target="_blank" rel="noopener noreferrer">📸 made by 배우자교실</a></p>
 </div>
@@ -445,6 +461,12 @@ input[type=file]{max-width:100%;min-width:0;font-size:.8rem}
     <div id="cs-result" class="guide hide"></div>
     <p class="note" style="margin-top:10px">① 학교를 만들면 <b>학교 코드와 인사담당자 비밀번호</b>가 나옵니다. ② 교감선생님께 비밀번호를 전달하고, ③ 교사들에게는 입장 링크만 알려 주세요. 교감선생님이 [관리자 → 규정 마법사]에서 우리 학교 규정을 반영합니다.</p>
   </div>
+  <div class="card" id="rr-card">
+    <h3>🔑 비밀번호 분실 신청 <small id="rr-n" style="font-weight:400"></small></h3>
+    <p class="note" style="text-align:left">⚠️ 메일을 보내기 전에, 적힌 메일 주소가 <b>실제 그 학교 교감 선생님의 공직자통합메일</b>인지 반드시 확인하세요. (학교 홈페이지 교직원 안내, 교육청 주소록, 학교 전화 등) 확인되지 않으면 [삭제]하세요.</p>
+    <div id="rr-list"></div>
+    <div class="btns"><button class="btn sm ghost" onclick="loadResets()">🔄 새로고침</button></div>
+  </div>
   <div class="card">
     <h3>🏫 학교 목록</h3>
     <div id="cs-list"></div>
@@ -456,10 +478,10 @@ input[type=file]{max-width:100%;min-width:0;font-size:.8rem}
   <div class="card">
     <h3>🔒 보안 안내 (꼭 읽어 주세요)</h3>
     <p class="note" style="font-size:.85rem;line-height:1.7">
-      • 학교 코드는 <b>무작위 8자</b>라 코드를 모르면 다른 학교 데이터를 찾을 수 없습니다. 코드·링크는 해당 학교 교원에게만 알려 주세요.<br>
-      • 인사담당자·제작자 비밀번호는 <b>암호화(PBKDF2)</b>해 저장하고, 제작자의 학교 목록은 제작자 비밀번호로 암호화되어 저장됩니다. 제작자 비밀번호를 잃으면 학교 목록을 복구할 수 없으니 [학교 목록 백업]을 받아 두세요.<br>
-      • 다만 이 앱은 서버 없이 동작하므로, 비밀번호 확인은 <b>화면(브라우저) 안에서</b> 이루어집니다. 코드를 아는 사람이 개발자 도구로 데이터베이스를 직접 건드리는 것까지는 막지 못합니다. 더 강한 보호(로그인 기반 접근 통제)는 Firebase Authentication을 붙여야 하며, 현재 버전에는 들어 있지 않습니다.<br>
-      • 아래 Firebase 규칙을 <b>Firebase 콘솔 → Realtime Database → 규칙</b>에 붙여넣으면, 학교 목록을 외부에서 훑어보는 것을 막을 수 있습니다. (※ 기존 배곧초 앱을 그대로 쓰는 동안은 baegotDraft 등 3줄을 꼭 남겨 두세요)
+      • 학교 코드는 <b>무작위 8자</b>입니다. 코드·입장 링크는 해당 학교 교원에게만 알려 주세요. 코드를 아는 사람은 그 학교 명단을 읽을 수 있습니다.<br>
+      • 데이터의 진짜 잠금은 <b>Firebase 규칙</b>입니다. 교사는 읽기와 입력 기간의 점수 제출, 자기 차례 선택만 가능하고, 수정·삭제는 인사담당자(교감)와 제작자만 할 수 있습니다. 아래 규칙을 <b>Firebase 콘솔 → Realtime Database → 규칙</b>에 붙여넣고 <b>게시</b>하세요.<br>
+      • 인사담당자·제작자 비밀번호는 Firebase 로그인(Authentication)으로 확인되며, 이 앱 화면에는 저장되지 않습니다. 비밀번호는 발급 때 <b>한 번만</b> 보이니 따로 보관하세요.<br>
+      • 교사 입력 기간에는 같은 이름으로 다른 사람의 입력을 바꿀 수 있습니다. 모든 입력은 변경 기록에 이전→이후 값으로 남으니, 배정우대 최종 확인 전에 명단을 점검하세요.
     </p>
     <textarea id="fb-rules" class="ta" rows="14" readonly style="font-family:monospace"></textarea>
     <div class="btns"><button class="btn sm ghost" onclick="copyText($('fb-rules').value)">📋 규칙 복사</button></div>
@@ -1868,7 +1890,7 @@ async function openCreator(){
   isCreator = true;
   $("landing").classList.add("hide"); $("app").classList.add("hide"); $("creator").classList.remove("hide");
   $("fb-rules").value = FB_RULES;
-  renderCreator();
+  renderCreator(); loadResets();
 }
 async function closeCreator(){
   CREG = null; CPW = ""; isCreator = false; isAdmin = false;
@@ -1986,6 +2008,7 @@ function buildRules(){
   const rng = (f, lo, hi) => nm(f) + ".isNumber() && " + nm(f) + ".val() >= " + lo + " && " + nm(f) + ".val() <= " + hi;
   const str = (f, mx) => nm(f) + ".isString() && " + nm(f) + ".val().length <= " + mx;
   const inboxOk = "newData.hasChildren(['name','scoreRaw','schoolCar','totalCar','transferF','headHope','leaveYear','ts']) && " + [str("name", 30), rng("scoreRaw", -50, 200), rng("schoolCar", 0, 60), rng("totalCar", 0, 60), rng("leaveYear", 0, 10), str("transferF", 40), str("headHope", 40), nm("ts") + ".isNumber()"].join(" && ") + " && " + nm("name") + ".val().length > 0";
+  const rrOk = "newData.hasChildren(['sido','sigungu','school','email','ts']) && " + [str("sido", 10), str("sigungu", 30), str("school", 40), str("email", 80), nm("ts") + ".isNumber()"].join(" && ") + " && " + nm("email") + ".val().matches(/^[^@ ]+@[^@ ]+\\.[^@ ]+$/)";
   const emptyCell = "(!data.exists() || data.val() === '') && newData.isString() && newData.val() !== '' && newData.val().length <= 60";
   return JSON.stringify({rules:{
     ".read":false, ".write":false,
@@ -1994,6 +2017,7 @@ function buildRules(){
       initialized:{".read":A, ".write":A + " && !data.exists() && root.child('platform/creators/' + auth.uid).exists()"},
       registry:{".read":creator, ".write":creator}
     },
+    resetRequests:{".read":creator, ".write":creator, "$id":Object.assign({".write":A + " && !data.exists() && newData.exists() && " + rrOk, "$other":{".validate":false}}, Object.fromEntries(["sido","sigungu","school","email","ts"].map(f => [f, {".validate":true}])))},
     schools:{
       ".read":false,
       "$sid":{
@@ -2636,6 +2660,54 @@ function setupAdminTabs(){
 function openFeedback(){
   try { BWJ.openFb("솔로몬", "v4"); }
   catch(e) { alert("의견함을 열지 못했습니다. 잠시 후 다시 시도해 주세요."); }
+}
+
+/* ---------- 비밀번호 분실 신청 (교감 → 제작자) ---------- */
+const MAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+function openResetForm(){ $("rs-msg").textContent = ""; $("reset-ov").classList.remove("hide"); }
+function closeResetForm(){ $("reset-ov").classList.add("hide"); }
+async function submitResetRequest(){
+  const f = id => $(id).value.trim(), msg = t => { $("rs-msg").textContent = t; };
+  const sido = $("rs-sido").value, sigungu = f("rs-sigungu"), school = f("rs-school"), email = f("rs-email");
+  if (!sido || !sigungu || !school) return msg("지역(시·도, 시·군·구)과 학교 이름을 입력해 주세요.");
+  if (!MAIL_RE.test(email) || email.length > 80) return msg("공직자통합메일 주소를 정확히 입력해 주세요.");
+  if (!$("rs-ok").checked) return msg("안내를 확인하고 동의에 체크해 주세요.");
+  let last = 0; try { last = +localStorage.getItem("solomonResetAt") || 0; } catch(e) {}
+  if (Date.now() - last < 60000) return msg("잠시 뒤에 다시 신청해 주세요.");
+  if (!(await ensureAnon())) return msg("보안 로그인을 시작하지 못했습니다. 잠시 뒤에 다시 시도해 주세요.");
+  try { await db.ref("resetRequests").push({sido, sigungu, school, email, ts:Date.now()}); }
+  catch(e) { return msg("신청을 보내지 못했습니다. 잠시 뒤에 다시 시도해 주세요."); }
+  try { localStorage.setItem("solomonResetAt", String(Date.now())); } catch(e) {}
+  ["rs-sigungu", "rs-school", "rs-email"].forEach(id => { $(id).value = ""; }); $("rs-ok").checked = false;
+  closeResetForm();
+  alert("✅ 신청이 접수되었습니다.\n제작자가 본인 확인을 한 뒤, 입력하신 공직자통합메일로 새 비밀번호를 보내 드립니다. (확인에 시간이 걸릴 수 있어요)");
+}
+let RR = {};
+async function loadResets(){
+  if (!isCreator) return;
+  try { RR = (await db.ref("resetRequests").once("value")).val() || {}; } catch(e) { RR = {}; }
+  const ids = Object.keys(RR).sort((a, b) => RR[b].ts - RR[a].ts);
+  $("rr-n").textContent = ids.length ? `(${ids.length}건)` : "";
+  $("rr-list").innerHTML = ids.map(id => { const r = RR[id];
+    return `<div class="rr-item"><div><b>${esc(r.sido)} ${esc(r.sigungu)} ${esc(r.school)}</b><br><small>${esc(r.email)} · ${new Date(r.ts).toLocaleString("ko-KR")}</small></div>` +
+      `<div class="btns" style="margin:6px 0 0"><button class="btn sm" onclick="handleReset('${esc(id)}')">본인 확인 후 재발급 + 메일 쓰기</button><button class="btn sm ghost" onclick="deleteReset('${esc(id)}')">삭제</button></div></div>`; }).join("") || '<div class="note">접수된 신청이 없습니다.</div>';
+}
+async function deleteReset(id){ try { await db.ref("resetRequests/" + id).remove(); } catch(e) {} loadResets(); }
+function openMail(u){ location.href = u; }
+async function handleReset(id){
+  const r = RR[id]; if (!r) return;
+  const L = (CREG.schools || []).filter(s => s.name === r.school && s.region && s.region.sido === r.sido && s.region.sigungu === r.sigungu);
+  if (L.length !== 1) return alert(L.length ? "같은 지역·이름의 학교가 여러 개입니다. 아래 학교 목록에서 직접 [비밀번호 재발급]을 하세요." : "학교 목록에서 같은 지역·학교 이름을 찾지 못했습니다. 신청 내용을 확인하거나, 아래 학교 목록에서 직접 처리하세요.");
+  const s = L[0], label = schoolLabel(s);
+  if (!confirm(`[${label}] 비밀번호를 재발급하고, ${r.email} 로 보낼 메일을 만듭니다.\n\n⚠️ 이 메일 주소가 실제 그 학교 교감 선생님의 공직자통합메일인지 확인하셨습니까?\n(확인하지 않았다면 [취소]하세요. 재발급하면 기존 비밀번호는 즉시 무효가 됩니다.)`)) return;
+  try {
+    const pw = genPw(), adm = await makeAdminAccount(pw);
+    await db.ref("schools/" + s.code).update({"meta/adminEmail":adm.email, admins:{[adm.uid]:true}});
+    showIssued(label, s.code, pw);
+    const body = `${label} 인사담당자(교감) 선생님께,\n\n요청하신 새 비밀번호를 보내 드립니다.\n\n· 입장 주소: ${schoolLink(s.code)}\n· 인사담당자 비밀번호: ${pw}\n\n로그인 방법: 위 주소로 들어가 [입장하기] → 오른쪽 위 [관리자] → 비밀번호 입력\n로그인 후 [관리자 → ⑤ 보안·설정]에서 비밀번호를 바로 바꿔 주세요.\n이 메일을 확인한 뒤에는 삭제해 주세요. 본인이 요청하지 않았다면 제작자에게 알려 주세요.`;
+    openMail(`mailto:${encodeURIComponent(r.email)}?subject=${encodeURIComponent("[솔로몬] " + label + " 인사담당자 비밀번호 안내")}&body=${encodeURIComponent(body)}`);
+    if (confirm("메일을 보냈다면 [확인]을 눌러 이 신청을 삭제하세요.\n(아직 안 보냈다면 [취소] — 위 화면의 비밀번호는 지금만 보입니다)")) await deleteReset(id);
+  } catch(e) { alert("재발급하지 못했습니다: " + authMsg(e)); }
 }
 
 </script>
