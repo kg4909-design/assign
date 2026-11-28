@@ -389,6 +389,18 @@ input[type=file]{max-width:100%;min-width:0;font-size:.8rem}
 #reset-ov.hide{display:none}
 .reset-box{background:#fff;border-radius:16px;max-width:460px;width:100%;max-height:92vh;overflow:auto;padding:18px 18px 14px}
 .rr-item{border:1px solid var(--line);border-radius:var(--r-s);padding:10px 12px;margin-bottom:8px}
+
+.auto-box{margin-bottom:10px;border:2px solid #93c5fd;background:#f5faff}
+.auto-sum{margin:10px 0 4px;padding:8px 10px;background:#eef6ff;border-radius:8px;font-size:.9rem}
+.auto-h{font-weight:800;margin:12px 0 4px;font-size:.92rem}
+.auto-it{border:1px solid #cfe0f5;border-radius:8px;padding:8px 10px;margin:6px 0;background:#fff;font-size:.88rem}
+.auto-ttl{display:block;cursor:pointer}
+.auto-new{margin-top:4px;color:#065f46}.auto-old{color:#6b7280;font-size:.82rem}
+.auto-it pre,.auto-cn pre{white-space:pre-wrap;word-break:break-all;background:#f8fafc;border-radius:6px;padding:6px 8px;font-size:.8rem;margin:4px 0;font-family:inherit}
+.auto-cn{margin:4px 0 4px 18px;padding:0;font-size:.86rem;line-height:1.5}.auto-cn li{margin:5px 0}
+.conf{font-size:.7rem;padding:1px 6px;border-radius:9px;font-weight:700}.conf.high{background:#d1fae5;color:#065f46}.conf.mid{background:#fef3c7;color:#92400e}.conf.low{background:#fee2e2;color:#991b1b}
+.auto-ack{display:block;margin:12px 0 4px;padding:8px 10px;background:#fff8e6;border:1px solid #f0d58a;border-radius:8px;font-size:.88rem}
+.auto-info{margin:8px 0;font-size:.86rem}
 </style>
 </head>
 <body>
@@ -509,21 +521,28 @@ input[type=file]{max-width:100%;min-width:0;font-size:.8rem}
 
   <div class="cfg blue" id="wiz-card">
     <h4 style="color:#1e3a8a">📜 우리 학교 규정 반영하기 (규정 마법사)</h4>
-    <p class="note">학교마다 학년 배정·업무 배정 순위가 다릅니다. <b>① 규정 PDF를 읽고 → ② 관련 조항을 찾아 보며 → ③ 아래 양식을 채우거나 AI 해석 결과를 불러오고 → ④ 미리보기로 순위 변화를 확인한 뒤 적용</b>하세요. 프로그램이 규정 문장을 스스로 해석해 확정하지 않습니다. 최종 확인은 인사담당자가 합니다.</p>
-    <details style="margin-bottom:10px"><summary style="cursor:pointer;font-weight:800;color:#1e3a8a;padding:6px 0">🔧 고급: 규정 PDF 읽기 · AI로 규칙 자동 채우기 (선택)</summary>
+    <p class="note">학교마다 학년 배정·업무 배정 순위가 다릅니다. <b>규정 PDF를 올리면 자동으로 제안</b>하고, 교감선생님이 결과와 <b>확인할 점</b>을 보고 적용합니다. 프로그램은 규정을 확정하지 않으며 최종 판단은 인사위원회·인사담당자가 합니다.</p>
+    <div class="wiz-box auto-box">
+      <strong>① 규정 PDF 올리기 → 자동 해석 <small>(딸깍 순서: 올리기 → 결과 확인 → 적용)</small></strong>
+      <p class="note" style="margin:6px 0">우리 학교 <b>인사위원회 규정 PDF</b>를 올리면 순위 규칙을 찾아 제안하고, 규정만으로는 정할 수 없는 <b>확인할 점</b>도 알려 드립니다.
+      회의 후 <b>개정안·회의 결과 PDF</b>를 다시 올리면 <b>현재 설정과 달라진 점만</b> 보여 드립니다. 파일은 서버에 올라가지 않고 이 기기에서만 읽습니다.</p>
+      <div class="row"><input type="file" id="reg-file" accept="application/pdf,.pdf,.txt" onchange="loadRegPdf(this.files[0])"></div>
+      <div id="reg-status" class="note" style="margin-top:6px"></div>
+      <details style="margin-top:6px"><summary style="cursor:pointer;font-size:.85rem;font-weight:700">PDF가 안 읽히면 · 회의 결과를 글로 적을 때: 여기에 붙여넣기</summary>
+        <textarea id="reg-text" class="ta" rows="5" placeholder="규정(또는 개정·회의 결과) 내용을 붙여넣으세요" oninput="onRegText()"></textarea></details>
+      <div class="btns"><button class="btn" onclick="runAuto()">🔎 자동 해석하기</button></div>
+      <div id="auto-res"></div>
+    </div>
+    <details style="margin-bottom:10px"><summary style="cursor:pointer;font-weight:800;color:#1e3a8a;padding:6px 0">🔧 고급: 조항 직접 찾아보기 · AI로 규칙 채우기 (선택)</summary>
     <div class="wiz-grid">
       <div class="wiz-box">
-        <strong>① 규정 PDF 읽기</strong>
-        <div class="row"><input type="file" id="reg-file" accept="application/pdf,.pdf" onchange="loadRegPdf(this.files[0])"></div>
-        <div id="reg-status" class="note" style="margin-top:6px">PDF 안의 글자를 이 기기에서 읽어 옵니다. (규정 파일은 서버에 올리지 않습니다)</div>
-        <textarea id="reg-text" class="ta" rows="5" placeholder="PDF에서 글자를 읽지 못하면 규정 내용을 여기에 붙여넣으세요" oninput="onRegText()"></textarea>
-        <strong style="display:block;margin-top:10px">② 관련 조항 찾기 <small>(참고용)</small></strong>
+        <strong>② 관련 조항 찾기 <small>(참고용)</small></strong>
         <div class="row" id="reg-tags"></div>
         <input id="reg-q" class="inp" style="width:100%;margin-top:6px" placeholder="직접 검색 (예: 동점, 우대, 부장)" oninput="renderRegHits()">
         <div id="reg-hits" class="reg-hits"></div>
       </div>
       <div class="wiz-box">
-        <strong>③ AI에게 규정 해석 맡기기 <small>(선택)</small></strong>
+        <strong>③ AI에게 규정 해석 맡기기 <small>(선택, 위 자동 해석으로 부족할 때)</small></strong>
         <p class="note" style="margin-top:6px">[해석 요청문 복사] → Claude 같은 AI 채팅에 붙여넣기 → 돌아온 JSON을 아래에 붙여넣고 [양식에 불러오기]. AI의 답은 틀릴 수 있으므로 <b>양식을 규정과 하나씩 대조</b>해 확인하세요.</p>
         <div class="btns" style="margin-top:0"><button class="btn sm" onclick="copyAiPrompt()">📋 해석 요청문 복사</button></div>
         <textarea id="wz-json" class="ta" rows="6" placeholder="AI가 알려준 JSON을 여기에 붙여넣기" style="margin-top:8px"></textarea>
@@ -539,6 +558,19 @@ input[type=file]{max-width:100%;min-width:0;font-size:.8rem}
       <div class="btns"><button class="btn sm" style="background:#0284c7" onclick="previewWiz()">🔍 미리보기 (순위 변화 확인)</button><button class="btn" onclick="applyWiz()">✅ 규칙 적용</button></div>
       <div id="wz-preview" class="guide hide"></div>
     </div>
+  </div>
+
+  <div class="cfg" id="tpl-card" style="border:2px solid #c4b5fd;background:#faf7ff">
+    <h4 style="color:#5b21b6">💾 학교 템플릿 · 새 학년도 시작</h4>
+    <p class="note">규정·정원·업무 목록·우대 항목은 이 학교에 계속 저장되어 있어 <b>내년에도 그대로 쓸 수 있습니다.</b> 아래는 백업·공유·새 학기 준비용입니다. (교원 명단·점수 등 개인정보는 템플릿에 들어가지 않습니다)</p>
+    <div class="btns">
+      <button class="btn sm" onclick="exportTemplate()">⬇️ 우리 학교 템플릿 저장(JSON)</button>
+      <label class="btn sm ghost" style="cursor:pointer">⬆️ 템플릿 불러오기<input type="file" id="tpl-file" accept=".json,application/json" style="display:none" onchange="importTemplate(this.files[0]);this.value=''"></label>
+    </div>
+    <div id="tpl-st" class="note"></div>
+    <strong style="font-size:.88rem;display:block;margin-top:10px">🗓️ 새 학년도 시작</strong>
+    <p class="note">규정·정원·업무·우대 항목은 그대로 두고, <b>교원 명단과 진행 상태만 비워</b> 0단계(점수 입력)로 돌아갑니다. 시작 전에 자동 백업됩니다. 작년 결과는 먼저 엑셀 등으로 내려받아 두세요.</p>
+    <div class="btns"><button class="btn sm" style="background:#6d28d9" onclick="startNewYear()">🗓️ 새 학년도 시작 (명단·진행 초기화)</button></div>
   </div>
 
   <div class="cfg" id="di-card" style="border:2px solid #7fd1b9;background:#f4fffb">
@@ -1703,6 +1735,302 @@ function exportCSV(){
   a.download = (META ? META.name : "학교") + "_솔로몬_배정결과.csv";
   a.click();
 }
+/* ===== 규정 자동 해석기 (서버·AI 없이, 이 기기 안에서 문장 패턴으로 찾습니다) =====
+   원칙: ① 찾은 항목마다 '원문 조항'을 함께 보여 준다 ② 확신이 낮으면 기본으로 체크하지 않는다
+         ③ 자동화할 수 없는 조항은 '확인할 점'으로 따로 알려 준다 ④ 사람이 확인하기 전에는 아무것도 적용하지 않는다 */
+const AUTO_STOP = /^(기능|소속|담당|업무|보직|일반|해당|각|전체|학교|학년|교과|예체능|임용|신임|전입)$/;
+function regUnits(text){
+  const lines = String(text || "").replace(/\r/g, "").replace(/[ 　]/g, " ").split("\n");
+  const units = []; let art = {no:0, title:"", chap:""}, chap = "", cur = null, ended = false, lastNo = 0;
+  const flush = () => { if (cur) { cur.t = cur.t.replace(/\s+/g, " ").trim(); cur.c = cur.t.replace(/\s/g, ""); if (cur.t) units.push(cur); } cur = null; };
+  for (const raw of lines) {
+    const ln = raw.replace(/\s+$/, ""); if (!ln.trim()) continue;
+    if (/^\s*부\s*칙/.test(ln)) { flush(); ended = true; continue; }
+    if (ended) continue;
+    const ch = ln.match(/^\s{0,40}제\s*(\d{1,2})\s*장\s*(.*)$/);
+    if (ch) { flush(); chap = ch[2].trim(); art = {no:0, title:"", chap}; continue; }
+    const am = ln.match(/^\s{0,2}(?:제\s*)?(\d{1,3})\s*조\s*(?:\(([^)]*)\))?\s*(.*)$/);
+    if (am && !/^\d+\s*항/.test(am[3]) && !/^[의에은는이가]/.test(am[3]) && +am[1] >= lastNo - 0) {
+      flush(); lastNo = +am[1]; art = {no:+am[1], title:(am[2] || "").trim(), chap};
+      cur = {art:art.no, title:art.title, chap, no:"", t:am[3] || "", head:true}; continue;
+    }
+    const nm = ln.match(/^\s{0,6}(\d{1,2})\.\s+(.*)$/), cm = ln.match(/^\s{0,8}([①-⑳])\s*(.*)$/), km = ln.match(/^\s{0,8}([가-하])\.\s+(.*)$/);
+    if (nm || cm || km) {
+      flush(); const m = nm || cm || km;
+      cur = {art:art.no, title:art.title, chap:art.chap, no:m[1], kind:nm ? "n" : cm ? "c" : "k", t:m[2] || ""}; continue;
+    }
+    if (cur && art.no) cur.t += " " + ln.trim(); else { flush(); cur = {art:art.no, title:art.title, chap:art.chap, no:"", t:ln.trim(), head:true}; }
+  }
+  flush();
+  return units;
+}
+const AUTO_SCOPE_IN = /담임|업무분장|교과전담|보직|부장|배정/, AUTO_SCOPE_OUT = /표창|국외|감축|감원|비정기|전보|위원회/;
+const inScope = (u, hasChap) => !hasChap || (AUTO_SCOPE_IN.test(u.chap) && !AUTO_SCOPE_OUT.test(u.chap));
+const refOf = u => !u.art ? "본문" : `제${u.art}조` + (u.no ? (u.kind === "n" ? `${u.no}항` : u.no) : "") + (u.title ? `(${u.title})` : "");
+const gradeRange = a => a.length > 2 && a.every((x, i) => i === 0 || x === a[i - 1] + 1) ? `${a[0]}~${a[a.length - 1]}학년` : a.join("·") + "학년";
+
+function regParse(text){
+  const out = {ok:true, items:[], concerns:[], stats:{chars:String(text || "").replace(/\s/g, "").length, arts:0, scoped:0}};
+  const C = (level, msg, u) => out.concerns.push({level, text:msg, ref:u ? refOf(u) : "", quote:u ? u.t.slice(0, 200) : ""});
+  const I = o => out.items.push(o);
+  if (out.stats.chars < 20) { out.ok = false; C("bad", "읽어 온 글자가 거의 없습니다. 스캔(사진) PDF이거나 글자가 이미지일 수 있어요. 규정 내용을 복사해 붙여넣거나 글자가 선택되는 PDF로 다시 올려 주세요."); return out; }
+  const units = regUnits(text);
+  const arts = [...new Set(units.map(u => u.art))].filter(x => x > 0); out.stats.arts = arts.length;
+  const hasChap = units.some(u => u.chap);
+  const S = units.filter(u => inScope(u, hasChap)); out.stats.scoped = S.length;
+  if (arts.length < 3 && out.stats.chars >= 300) C("warn", "‘제N조’ 형식의 조항을 거의 찾지 못했습니다. 규정 형식이 다르면 결과가 부정확할 수 있어요. 아래 항목을 꼼꼼히 확인하세요.");
+  /* 이름·개정일 */
+  const head = String(text).split("\n").slice(0, 15).join("\n");
+  const title = (head.match(/([가-힣0-9 ]{3,30}(?:규정|규칙|지침|내규))/) || [])[1];
+  const dates = [...head.matchAll(/(?:제정|재정|개정)\s*(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/g)].map(m => `${m[1]}.${m[2].padStart(2, "0")}.${m[3].padStart(2, "0")}.`).sort();
+  if (title) { const label = title.trim() + (dates.length ? ` (${dates[dates.length - 1]})` : ""); I({key:"label", title:"규정 이름", conf:"high", ref:"문서 첫머리", quote:head.split("\n").find(l => l.includes(title.trim())) || "", val:label, fmt:v => v, cur:w => w.label, apply:w => { w.label = label; }}); }
+
+  /* 1) 점수표 */
+  const sU = S.find(u => /점수/.test(u.c) && /\d학년\d+점/.test(u.c)) || units.find(u => /점수/.test(u.c) && /\d학년\d+점/.test(u.c));
+  let scoreMap = null;
+  if (sU) {
+    const g = {}; for (const m of sU.c.matchAll(/(\d)학년(\d+)점/g)) g[m[1]] = +m[2];
+    const jd = (sU.c.match(/(?:교과)?전담[^,0-9]{0,10}?(\d+)점/) || [])[1], im = (sU.c.match(/임의배정[^,0-9]{0,10}?(\d+)점/) || [])[1];
+    const yrs = (sU.c.match(/\((\d)년\)/) || sU.c.match(/최근(\d)년/) || [])[1];
+    scoreMap = {g, jd:jd ? +jd : null, im:im ? +im : null, yrs:yrs ? +yrs : null};
+    const byPts = {}; Object.entries(g).forEach(([k, v]) => (byPts[v] = byPts[v] || {g:[], x:[]}).g.push(+k));
+    if (scoreMap.jd != null) (byPts[scoreMap.jd] = byPts[scoreMap.jd] || {g:[], x:[]}).x.push("교과전담 희망");
+    if (scoreMap.im != null) (byPts[scoreMap.im] = byPts[scoreMap.im] || {g:[], x:[]}).x.push("임의배정");
+    const opts = Object.keys(byPts).map(Number).sort((a, b) => a - b).map(v => { const p = byPts[v]; const parts = [...(p.g.length ? [gradeRange(p.g.sort((a, b) => a - b))] : []), ...p.x]; return {v, label:`${parts.join("·")} (${v}점)`}; });
+    const desc = [...Object.entries(g).map(([k, v]) => `${k}학년 ${v}`), ...(scoreMap.jd != null ? [`교과전담 희망 ${scoreMap.jd}`] : []), ...(scoreMap.im != null ? [`임의배정 ${scoreMap.im}`] : [])].join(" · ");
+    const guide = `${scoreMap.yrs ? scoreMap.yrs + "년 " : ""}학년점수: ${desc} (${refOf(sU).replace(/\(.*\)/, "")}). 점수 계산은 규정 원문을 확인하세요.`;
+    I({key:"score", title:"점수 안내문 · 점수 선택지", conf:"high", ref:refOf(sU), quote:sU.t, val:{guide, opts}, fmt:v => v.guide, cur:w => ({guide:w.scoreGuide, opts:w.leaveOptions}),
+       apply:w => { w.scoreGuide = guide; w.leaveOptions = opts; }});
+    const h = sU.c.includes("휴직") ? sU : S.find(u => /휴직/.test(u.c) && /점수/.test(u.c));
+    if (h) {
+      const frac = (h.c.match(/(\d)\/(\d)/) || [])[0];
+      if (frac === "1/2") I({key:"halve", title:"휴직 6개월 이상 → 당해 학년점수 1/2", conf:"high", ref:refOf(h), quote:h.t, val:true, fmt:() => "‘6개월 이상 휴직’ 구분에 점수 반감 적용", cur:w => !!(w.statuses.find(s => s.value === "6개월이상휴직") || {}).halveCurrent,
+        apply:w => { const s = w.statuses.find(x => x.value === "6개월이상휴직"); if (s) s.halveCurrent = true; }});
+      else if (frac) C("bad", `휴직자 점수를 ${frac}로 주는 규정이 있으나, 이 앱은 ‘1/2(반감)’만 지원합니다. 해당 교원의 점수는 직접 계산해 입력하세요.`, h);
+    }
+  } else C("warn", "‘N학년 N점’ 형태의 점수표를 찾지 못했습니다. 학교가 점수제를 쓰지 않으면 문제없지만, 쓴다면 [규칙 양식]의 ‘점수 안내문’을 직접 적어 주세요.");
+
+  /* 2) 동점 기준 */
+  const tieRe = /(본교(?:근무|근속|재직)?(?:고|다)?경력(?:자)?|본교근속다경력자|교육총경력|총교육경력|총경력|교육경력|고경력|점수|연령|고령|생년월일|연소)/g;
+  const tieCand = units.filter(u => /동점|동일한조건|동일조건|같은조건|점수가같|점수가동일|경력이같|동일경력|같은경우|동일한경우/.test(u.c)).map(u => {
+    const i = u.c.search(/동점|동일한조건|동일조건|같은조건|점수가같|점수가동일|경력이같|동일경력|같은경우|동일한경우/); const tok = [...u.c.slice(i).matchAll(tieRe)].map(m => m[1]);
+    return {u, tok};
+  }).filter(x => x.tok.length);
+  const pref = x => /담임/.test(x.u.chap) ? 0 : /업무/.test(x.u.chap) ? 1 : inScope(x.u, hasChap) ? 2 : 3;
+  tieCand.sort((a, b) => pref(a) - pref(b));
+  if (tieCand.length) {
+    const main = tieCand[0], f = [{f:"score", dir:"desc"}], seen = new Set(["score"]); let age = false;
+    main.tok.forEach(t => { const k = /연령|고령|생년월일|연소/.test(t) ? "age" : /^본교/.test(t) ? "schoolCar" : t === "점수" ? "score" : "totalCar"; if (k === "age") age = true; else if (!seen.has(k)) { seen.add(k); f.push({f:k, dir:"desc"}); } });
+    const desc = f.map(x => TB_FIELDS[x.f]).join(" → ");
+    I({key:"tie", title:"동점일 때 순서", conf:f.length > 1 ? "high" : "low", ref:refOf(main.u), quote:main.u.t, val:f, fmt:v => v.map(x => TB_FIELDS[x.f]).join(" → "), cur:w => (w.tieBreakers || []).map(x => ({f:x.f, dir:x.dir})), apply:w => { w.tieBreakers = f; }});
+    if (age) C("warn", "동점 기준에 나이(연령·생년월일)가 있으나 이 앱에는 나이 항목이 없습니다. 위 기준까지 같은 동점자는 인사위원회가 정한 방법으로 교감이 직접 정하세요.", main.u);
+    tieCand.slice(1).forEach(x => C("info", `다른 동점 기준이 있습니다(${x.tok.join(" → ")}). 이 앱은 위 한 가지만 적용하므로, 같은 기준이 아니라면 해당 업무에 맞게 확인하세요.`, x.u));
+  } else C("warn", "동점일 때의 순서를 정한 조항을 찾지 못했습니다. 기본값(점수 → 본교 경력 → 총경력)으로 두었으니 인사위원회에서 확인하세요.");
+
+  /* 3) 우대 규정 */
+  const wu = S.filter(u => /우대/.test(u.title) && !u.head && u.art);
+  const wArt = wu.length ? wu[0].art : null;
+  const gUnits = wu.filter(u => u.art === wArt);
+  let gradeRules = null, dutyRules = [];
+  if (gUnits.length) {
+    gradeRules = gUnits.map((u, i) => ({code:`우대${i + 1}`, desc:`제${u.art}조${u.kind === "n" ? u.no + "호" : u.no} (${u.t.replace(/\s*\(.*$/, "").slice(0, 38)})`, weight:(i + 1) * 10}));
+    I({key:"gradeRules", title:`우대 대상 (제${wArt}조 ${gUnits.length}개 호)`, conf:"mid", ref:`제${wArt}조(${gUnits[0].title})`, quote:gUnits.map(u => `${u.no}${u.kind === "n" ? "." : ""} ${u.t}`).join("\n"), val:gradeRules, fmt:v => v.map(r => `${r.code}: ${r.desc}`).join("\n"),
+      cur:w => (w.priorityRules || (typeof state !== "undefined" && state && state.priorityRules) || DEFAULT_RULES).gradeRules.map(r => ({code:r.code, desc:r.desc, weight:r.weight})),
+      apply:w => { w.priorityRules = w.priorityRules || clone((typeof state !== "undefined" && state && state.priorityRules) || DEFAULT_RULES); w.priorityRules.gradeRules = clone(gradeRules); }});
+    C("info", `‘호’의 순서가 곧 우대 순위(1호가 가장 먼저)라고 가정했습니다. 순서가 다르면 [우대 규정 항목·가중치]에서 숫자를 바꾸세요. 우대 대상자 확정은 규정대로 인사위원회 심의를 거쳐 교감이 직접 체크해야 합니다.`, gUnits[0]);
+  } else C("info", "‘배정의 우대’처럼 우대 대상을 나열한 조항을 찾지 못했습니다. 우대 제도가 없다면 그대로 두세요.");
+
+  /* 4) 업무 배정 순서 (… 순으로 배정한다) */
+  const seqU = S.find(u => /순으로배정/.test(u.c) && /업무/.test(u.c + u.chap));
+  if (seqU) {
+    const body = seqU.c.split(/순으로배정/)[0].replace(/^.*?(때에는|경우에는|시에는|때)/, "").replace(/^업무(는|를|은)?/, "");
+    const toks = body.replace(/\([^)]*\)/g, m => /,/.test(m) ? "" : m).split(/[,，、]/).map(s => s.trim()).filter(Boolean);
+    let transfer = false, genW = 0; const gw = {}, stw = {}, drules = []; let pos = 0, lastGrade = 0, firstStatus = 0; const unknown = [];
+    toks.forEach(tk => {
+      pos++; const w = pos * 10; let m;
+      if (/배려|우대/.test(tk)) drules.push({code:`업무${drules.length + 1}`, desc:`${refOf(seqU).replace(/\(.*\)/, "")} (${tk.replace(/\(.*$/, "")} - 우대 사항 적용)`, weight:w});
+      else if (/우선선택권|우선권/.test(tk)) drules.push({code:`업무${drules.length + 1}`, desc:`${refOf(seqU).replace(/\(.*\)/, "")} (${tk.replace(/\(.*$/, "")})`, weight:w});
+      else if ((m = tk.match(/(\d)(?:[~～∼\-–](\d))?학년/))) { for (let g = +m[1]; g <= +(m[2] || m[1]); g++) gw[`${g}학년`] = w; lastGrade = w; }
+      else if (/복직/.test(tk)) { stw["복직"] = w; firstStatus = firstStatus || w; }
+      else if (/유예/.test(tk)) { stw["유예"] = w; firstStatus = firstStatus || w; }
+      else if (/전보/.test(tk)) { firstStatus = firstStatus || w; }
+      else if (/^일반(교사|담임)?$|^그외/.test(tk.replace(/\(.*$/, ""))) { genW = w; }
+      else if (/전입/.test(tk)) { firstStatus = firstStatus || w; transfer = true; }
+      else unknown.push(tk);
+    });
+    drules.forEach((r, i) => { r.code = `업무${i + 1}`; });
+    if (drules.length) { dutyRules = drules; I({key:"dutyRules", title:"업무 배정 우대 항목", conf:"mid", ref:refOf(seqU), quote:seqU.t, val:drules, fmt:v => v.map(r => `${r.code}: ${r.desc} (가중치 ${r.weight})`).join("\n"),
+      cur:w => (w.priorityRules || (typeof state !== "undefined" && state && state.priorityRules) || DEFAULT_RULES).dutyRules.map(r => ({code:r.code, desc:r.desc, weight:r.weight})),
+      apply:w => { w.priorityRules = w.priorityRules || clone((typeof state !== "undefined" && state && state.priorityRules) || DEFAULT_RULES); w.priorityRules.dutyRules = clone(drules); }}); }
+    const def = genW || (lastGrade ? (firstStatus && firstStatus > lastGrade ? Math.round((lastGrade + firstStatus) / 2) : lastGrade + 5) : null);
+    if (Object.keys(gw).length || Object.keys(stw).length) {
+      const val = {gw, stw, def};
+      I({key:"order2", title:"2단계(업무) 순서: 학년·복직·유예 교사", conf:"mid", ref:refOf(seqU), quote:seqU.t, val,
+        fmt:v => `${Object.entries(v.gw).map(([k, x]) => `${k} 교사 ${x}`).join(" · ")}${v.def ? ` · 그 외 일반 교사 ${v.def}` : ""}${Object.keys(v.stw).length ? " · " + Object.entries(v.stw).map(([k, x]) => `${k} ${x}`).join(" · ") : ""} (숫자가 작을수록 먼저)`,
+        cur:w => ({gw:Object.fromEntries(Object.entries(w.stage2.gradeWeights || {}).map(([k, x]) => [k, Number(x)])), stw:Object.fromEntries(w.statuses.filter(s => s.w2 != null && s.w2 !== "" && (s.value === "복직" || s.value === "유예")).map(s => [s.value, Number(s.w2)])), def:Number(w.stage2.defaultWeight)}),
+        apply:w => { w.stage2.gradeWeights = clone(gw); if (def) w.stage2.defaultWeight = def; Object.entries(stw).forEach(([k, x]) => { const s = w.statuses.find(y => y.value === k); if (s) s.w2 = x; }); }});
+      C("info", "업무 배정 순서는 규정 문장의 나열 순서대로 10·20·30… 숫자를 붙인 것입니다(간격은 임의). 일반 교사(위에 없는 학년)는 학년 교사 바로 뒤로 두었습니다. 규정의 뜻과 다르면 [순위 규칙 양식]에서 고치세요.", seqU);
+    }
+    if (transfer) C("info", "‘전입 교사’는 앱에 별도 구분이 없어 일반 교사와 같게 처리됩니다. 전입 교사를 뒤로 보내야 하면 [순위 규칙 양식]에서 순서를 조정하세요.", seqU);
+    unknown.forEach(tk => C("info", `업무 배정 순서에 있는 ‘${tk}’는 이 앱에서 자동으로 구분되지 않습니다. 필요하면 우대 체크나 순서 조정(▲▼)으로 반영하세요.`, seqU));
+  } else C("info", "업무 배정의 우선순위 문장(‘…순으로 배정한다’)을 찾지 못했습니다. 업무 배정은 학년 배정과 같은 순서를 쓰거나, 필요한 부분만 [순위 규칙 양식]에서 직접 정하세요.");
+
+  /* 5) 부장 */
+  const headSet = new Set(); const headU = units.filter(u => /부장/.test(u.c));
+  let nGrade = 0; headU.forEach(u => { const m = u.c.match(/(\d)개학년부장/); if (m) nGrade = Math.max(nGrade, +m[1]); [...u.c.matchAll(/([1-6])학년부장/g)].forEach(x => nGrade = Math.max(nGrade, +x[1])); [...u.t.matchAll(/(?:^|[\s(,·「『])([가-힣]{2,6})부장(?![가-힣]*교사)/g)].forEach(x => { const n = x[1]; if (n.length >= 2 && !AUTO_STOP.test(n) && !/학년$/.test(n) && !/(기능|소속|업무|보직|담당)$/.test(n)) headSet.add(n + "부장"); }); });
+  if (nGrade || headSet.size) {
+    const heads = [...Array.from({length:Math.min(nGrade, 6)}, (_, i) => `${i + 1}학년부장`), ...headSet];
+    const hu = headU[0];
+    I({key:"heads", title:"부장 희망 목록", conf:headSet.size ? "mid" : "low", ref:refOf(hu), quote:headU.slice(0, 3).map(u => u.t.slice(0, 120)).join("\n"), val:heads, fmt:v => v.join(", "), cur:w => w.headOptions, apply:w => { w.headOptions = heads; }});
+    if (/업무부장/.test(headU.map(u => u.c).join(""))) C("info", "‘업무부장’은 몇 명이라고만 나오고 이름(교무부장·연구부장 등)은 규정에 없습니다. [부장 희망 목록]에 학교의 실제 부장 이름을 직접 적어 주세요.", headU.find(u => /업무부장/.test(u.c)));
+  }
+
+  /* 6) 일반 전보내신 · 만기 · 휴직 */
+  const gn = S.filter(u => /일반전보내신/.test(u.c));
+  const last = gn.filter(u => /최후순위/.test(u.c)), first = gn.filter(u => /(우선순위로|우선배정|우선으로)/.test(u.c) && !/최후/.test(u.c));
+  if (last.length) I({key:"naesin", title:"일반 전보내신 교사는 같은 묶음 중 최후순위", conf:"high", ref:refOf(last[0]), quote:last.map(u => `${refOf(u)} ${u.t}`).join("\n"), noop:true, val:1, fmt:() => "순위 묶음에서 ‘일반전보내신’을 ‘재직 교사’ 다음 순서로 둠 (현재 기본값과 같음)", cur:w => 1, apply:() => {}});
+  if (last.length && first.length) C("warn", `일반 전보내신 교사 처리가 조항마다 다릅니다. ${refOf(last[0])}는 ‘최후순위’, ${refOf(first[0])}는 ‘우선’으로 배정합니다(상황이 다른 것일 수 있음). 앱은 ‘최후순위’를 기본으로 하니 전담 배정 등 예외는 직접 처리하세요.`, first[0]);
+  if (!S.some(u => /만기/.test(u.c))) C("info", "‘만기 전보자’에 대한 조항이 없습니다. 앱은 기본으로 만기·1년 휴직 교사를 학년·업무 배정에서 제외합니다. 학교 방침과 다르면 [교원 구분]을 고치세요.");
+  if (!S.some(u => /휴직/.test(u.c))) C("info", "휴직자 처리 조항을 찾지 못했습니다. 기본값(6개월 이상 휴직은 점수 1/2)을 쓰려면 그대로, 아니면 [교원 구분]을 고치세요.");
+
+  /* 7) 자동화할 수 없는 조항 → 확인할 점 */
+  const pick = (re, lv, msg, lim = 2, pool = S) => { const h = pool.filter(u => re.test(u.c)); h.slice(0, lim).forEach((u, i) => C(lv, i ? `(같은 종류) ${msg}` : msg, u)); if (h.length > lim) out.concerns.push({level:lv, text:`…같은 종류의 조항이 ${h.length - lim}곳 더 있습니다.`, ref:"", quote:""}); return h.length; };
+  pick(/임의배정|학교장이.{0,16}(결정|배정|조정|임용)|재량|학교경영상.{0,12}필요/, "warn", "학교장 재량(임의 배정) 조항입니다. 앱은 규정에 따른 순위만 계산하므로, 재량 배정은 교감이 [배정 수정]이나 우대 체크로 직접 반영해야 합니다.", 3);
+  pick(/(\d)년(을초과하여|까지)|연속/, "warn", "같은 학년·업무를 연속으로 맡을 수 있는 연한 제한은 앱이 자동으로 막지 못합니다. 대상 교원을 교감이 직접 확인해 주세요.");
+  pick(/성비|성별|남.여교사/, "warn", "성별·성비를 고려하는 조항은 앱이 계산하지 않습니다.");
+  pick(/연령|고령자|연소자|생년월일/, "warn", "나이(연령·생년월일) 기준이 있습니다. 앱에는 나이 입력·정렬이 없어 동점 처리 등을 수동으로 해야 합니다.", 2);
+  pick(/추첨|제비뽑|무작위/, "warn", "추첨 방식은 앱에서 지원하지 않습니다. 추첨 결과를 점수·순서에 반영해 직접 입력하세요.");
+  pick(/지망/, "info", "‘N지망’ 희망 제도가 있습니다. 이 앱은 순위 순서대로 선생님이 직접 선택하는 방식이라 지망서는 따로 받지 않습니다.");
+  pick(/전공|연수과정|특기|적임자|소양|지도성|교수능력|업무수행능력|기능을고려/, "warn", "전공·연수·적임자처럼 사람이 판단해야 하는 기준입니다. 앱이 자동으로 정하지 못하므로 우대 체크(순서 조정)로 반영하세요.", 3);
+  pick(/고르게배치|고르게배정/, "info", "‘학년별로 고르게 배치’ 같은 균형 조건은 자동 점검되지 않습니다.");
+  pick(/만\d+세|\d+년이상근속/, "info", "나이·근속 연수 자격 조건은 앱이 대신 판단하지 않으니, 해당되는 교원을 교감이 우대 항목에서 직접 체크해야 합니다.");
+  if (S.some(u => /교과전담/.test(u.chap))) C("warn", "교과전담 교사 배정(전공·연수·체육/영어 우대, 미달 시 처리 등)은 학년·업무 자동 순위에 반영되지 않습니다. 전담 자리 수는 [학년·전담 정원]에서 정하고, 경합 순서는 우대 체크로 반영하세요.");
+
+  /* 8) 문서 구조 점검 */
+  const nums = arts.slice().sort((a, b) => a - b), gaps = []; for (let i = nums[0]; i < nums[nums.length - 1]; i++) if (!nums.includes(i)) gaps.push(i);
+  if (gaps.length && nums.length > 4) C("warn", `조 번호가 건너뛰었습니다: ${gaps.map(g => `제${g}조`).join(", ")}. 개정 과정에서 빠진 조항이 있는지 확인하세요.`);
+  const dup = nums.filter((n, i) => nums.indexOf(n) !== i); if (dup.length) C("warn", `같은 조 번호가 두 번 나옵니다: ${[...new Set(dup)].map(g => `제${g}조`).join(", ")}`);
+  const hasCl = {}; units.forEach(u => { if (u.kind === "n") (hasCl[u.art] = hasCl[u.art] || new Set()).add(+u.no); });
+  const refs = new Set();
+  S.forEach(u => [...u.t.replace(/\s/g, "").matchAll(/(.{0,8})제(\d{1,2})조(?:제?(\d{1,2})항)?/g)].forEach(m => {
+    if (/시행령|훈령|법|세부기준|승진규정|지침$/.test(m[1]) || +m[2] === u.art && !m[3]) return;
+    const k = `${m[2]}-${m[3] || ""}`; if (refs.has(k)) return;
+    if (!arts.includes(+m[2])) { refs.add(k); C("warn", `제${m[2]}조를 인용하지만 규정에 그 조가 없습니다(외부 규정을 가리키는 것이면 무시하세요).`, u); }
+    else if (m[3] && hasCl[+m[2]] && !hasCl[+m[2]].has(+m[3])) { refs.add(k); C("warn", `제${m[2]}조 ${m[3]}항을 인용하지만 그 항이 없습니다. 조항 번호가 맞는지 확인하세요.`, u); }
+  }));
+  if (S.some(u => /인사(자문)?위원회/.test(u.c) && /(심의|협의)/.test(u.c))) C("info", "우대 적용 등은 인사위원회 심의를 거치도록 되어 있습니다. 앱은 심의 결과를 알지 못하므로, 위원회가 확정한 뒤 교감이 우대를 체크하세요.");
+  if (out.items.length < 2) C("warn", "자동으로 찾은 항목이 거의 없습니다. 규정 형식이 달라서일 수 있어요. 아래 [순위 규칙 양식]에서 직접 설정하거나 규정을 붙여넣어 다시 시도하세요.");
+  const rank = {bad:0, warn:1, info:2}; out.concerns.sort((a, b) => rank[a.level] - rank[b.level]);
+  return out;
+}
+
+/* ===== 규정 자동 해석 화면 · 템플릿 저장/불러오기 · 새 학년도 시작 ===== */
+let AUTO = null;
+const CONF_LABEL = {high:"확실", mid:"확인 필요", low:"불확실"};
+function autoCur(it){ try { return it.cur(WZ); } catch(e) { return null; } }
+function autoFmt(it, v){ try { const s = it.fmt(v); return s == null || s === "" ? "(없음)" : String(s); } catch(e) { return "(없음)"; } }
+function runAuto(){
+  const st = $("auto-res");
+  if (!REGTXT.trim()) { st.innerHTML = '<div class="note" style="color:#c62828">먼저 규정 PDF를 올리거나 내용을 붙여넣어 주세요.</div>'; return; }
+  if (!WZ) WZ = wzFromCfg();
+  try { syncWiz(); } catch(e) {}
+  try { AUTO = regParse(REGTXT); } catch(e) { st.innerHTML = '<div class="note" style="color:#c62828">⚠️ 해석 중 오류가 났습니다(' + esc(e.message || e) + '). 내용을 붙여넣어 다시 시도하거나 아래 양식에 직접 입력하세요.</div>'; return; }
+  renderAuto();
+}
+function renderAuto(){
+  const A = AUTO, box = $("auto-res"); if (!A) { box.innerHTML = ""; return; }
+  const chg = A.items.filter(it => !it.noop && JSON.stringify(autoCur(it)) !== JSON.stringify(it.val));
+  const info = A.items.filter(it => it.noop);
+  const same = A.items.length - chg.length - info.length;
+  const cnt = {bad:0, warn:0, info:0}; A.concerns.forEach(c => cnt[c.level]++);
+  let h = `<div class="auto-sum">📄 ${A.stats.chars.toLocaleString()}자 · 조항 ${A.stats.arts}개 읽음 → <b>바꿀 제안 ${chg.length}개</b>` + (same ? ` · 현재와 같은 항목 ${same}개` : "") +
+    ` · 확인할 점 <b style="color:${cnt.bad ? "#c62828" : "#b45309"}">${cnt.bad + cnt.warn}개</b>${cnt.info ? ` (참고 ${cnt.info}개)` : ""}</div>`;
+  if (chg.length) {
+    h += `<div class="auto-h">① 자동으로 찾은 규칙 <small>(체크한 것만 아래 양식에 반영됩니다)</small></div>` + chg.map(it => {
+      const oldT = autoFmt(it, autoCur(it)), newT = autoFmt(it, it.val);
+      return `<div class="auto-it"><label class="auto-ttl"><input type="checkbox" class="auto-ck" data-k="${it.key}" ${it.conf === "low" ? "" : "checked"}> <b>${esc(it.title)}</b> <span class="conf ${it.conf}">${CONF_LABEL[it.conf]}</span> <small>${esc(it.ref)}</small></label>` +
+        `<div class="auto-new">제안: ${esc(newT).replace(/\n/g, "<br>")}</div><div class="auto-old">현재: ${esc(oldT).replace(/\n/g, "<br>")}</div>` +
+        (it.quote ? `<details><summary>규정 원문 보기</summary><pre>${esc(it.quote)}</pre></details>` : "") + `</div>`;
+    }).join("");
+  } else if (A.ok) h += `<div class="note" style="margin:8px 0">현재 설정과 다른 항목이 없습니다. (이미 반영되어 있거나, 이 문서에서 바꿀 규칙을 찾지 못했습니다)</div>`;
+  if (info.length) h += `<div class="note">ℹ️ ${info.map(it => esc(it.title)).join(" · ")}: 규정과 현재 기본값이 같아 별도 변경이 없습니다.</div>`;
+  const cc = lv => A.concerns.filter(c => c.level === lv).map(c => `<li>${esc(c.text)}${c.ref ? ` <small>(${esc(c.ref)})</small>` : ""}${c.quote ? `<details><summary>원문</summary><pre>${esc(c.quote)}</pre></details>` : ""}</li>`).join("");
+  if (cnt.bad + cnt.warn) h += `<div class="auto-h" style="color:#b45309">② ⚠️ 확인할 점 <small>(자동으로 해결되지 않는 부분 — 인사위원회에서 정해 주세요)</small></div><ul class="auto-cn">${cc("bad")}${cc("warn")}</ul>`;
+  if (cnt.info) h += `<details class="auto-info"><summary>③ 참고 사항 ${cnt.info}개 보기</summary><ul class="auto-cn">${cc("info")}</ul></details>`;
+  h += `<label class="chk auto-ack"><input type="checkbox" id="auto-ack"> 위 <b>확인할 점</b>을 읽었고, 인사위원회 규정과 맞는지 확인했습니다</label>` +
+    `<div class="btns"><button class="btn sm" style="background:#0284c7" onclick="applyAuto(false)">⬇️ 체크한 항목을 양식에 반영 · 미리보기</button>` +
+    `<button class="btn" onclick="applyAuto(true)">✅ 반영하고 바로 적용</button><button class="btn sm ghost" onclick="downloadAutoReport()">📄 보고서 내려받기</button></div>` +
+    `<p class="note">※ 자동 해석은 문장 모양을 보고 찾는 방식이라 틀릴 수 있습니다. ‘원문 보기’로 확인하고, 적용 전 [미리보기]로 순위 변화를 꼭 보세요. 적용 전에는 자동 백업됩니다.</p>`;
+  box.innerHTML = h;
+}
+async function applyAuto(doApply){
+  if (!AUTO) return;
+  if (!$("auto-ack").checked) { alert("먼저 ‘확인할 점’을 읽고 아래 확인란에 체크해 주세요."); return; }
+  const keys = [...document.querySelectorAll(".auto-ck:checked")].map(x => x.dataset.k);
+  if (!keys.length) { alert("반영할 항목을 하나 이상 체크해 주세요."); return; }
+  if (!WZ) WZ = wzFromCfg();
+  try { syncWiz(); } catch(e) {}
+  const sel = AUTO.items.filter(it => keys.includes(it.key) && !it.noop);
+  if (sel.some(it => it.key === "gradeRules" || it.key === "dutyRules") && ((state && state.teachers) || []).some(t => (t.gradePriorities || []).length || (t.dutyPriorities || []).length) &&
+      !confirm("우대 항목을 바꾸면 이미 체크한 우대(약칭)가 새 항목과 맞지 않을 수 있습니다.\n적용 뒤 [명단·우대] 탭에서 우대 체크를 다시 확인해야 합니다.\n계속할까요?")) return;
+  sel.forEach(it => { try { it.apply(WZ); } catch(e) {} });
+  renderWiz(); const ok = previewWiz();
+  const pv = $("wz-preview"); if (pv && pv.scrollIntoView) pv.scrollIntoView({behavior:"smooth", block:"center"});
+  if (doApply && ok) await applyWiz();
+  else if (doApply && !ok) alert("고쳐야 할 항목이 있어 적용하지 않았습니다. 미리보기 영역의 안내를 확인하세요.");
+}
+function downloadAutoReport(){
+  if (!AUTO) return;
+  const L = [`[규정 해석 보고서] ${META ? META.name : ""} — ${new Date().toLocaleDateString("ko-KR")}`, "※ 프로그램이 규정 문장에서 자동으로 찾은 결과입니다. 최종 확정은 인사위원회에서 하세요.", ""];
+  L.push("■ 찾은 규칙");
+  AUTO.items.forEach(it => L.push(`- ${it.title} [${CONF_LABEL[it.conf]}] (${it.ref})\n    ${autoFmt(it, it.val).replace(/\n/g, "\n    ")}`));
+  L.push("", "■ 확인할 점 (인사위원회에서 정해야 할 사항)");
+  AUTO.concerns.forEach((c, i) => L.push(`${i + 1}. [${{bad:"중요", warn:"확인", info:"참고"}[c.level]}] ${c.text}${c.ref ? ` (${c.ref})` : ""}`));
+  fileDownload(L.join("\n"), "규정해석_보고서_" + new Date().toISOString().slice(0, 10) + ".txt", "text/plain;charset=utf-8");
+}
+
+/* ---------- 학교 템플릿 저장/불러오기 · 새 학년도 시작 ---------- */
+function exportTemplate(){
+  const c = clone(cfg()); delete c.access; delete c.privacyNotice; delete c.retentionDays;
+  const T = {kind:"solomon-template", v:1, school:META ? META.name : "", savedAt:new Date().toISOString().slice(0, 10), cfg:c,
+    rules:clone((state && state.priorityRules) || DEFAULT_RULES), gradeLimits:clone((state && state.gradeLimits) || {}), duties:clone((state && state.duties) || [])};
+  fileDownload(JSON.stringify(T, null, 1), "솔로몬_템플릿_" + (META ? META.name : "학교") + "_" + T.savedAt + ".json");
+  $("tpl-st").textContent = "✅ 템플릿 파일을 내려받았습니다. (교원 개인정보는 들어 있지 않습니다)";
+}
+function checkTemplate(T){
+  if (!T || T.kind !== "solomon-template" || !T.cfg) throw new Error("솔로몬 템플릿 파일이 아닙니다");
+  const v = validateCfg({...T.cfg, priorityRules:T.rules || {gradeRules:[], dutyRules:[]}});
+  if (v.errors.length) throw new Error(v.errors.slice(0, 3).join(" / "));
+  const gl = {}; Object.entries(T.gradeLimits || {}).forEach(([k, n]) => { if (!k.trim() || /[.$#\[\]\/]/.test(k)) throw new Error("정원 이름에 쓸 수 없는 글자가 있습니다: " + k); const x = Number(n); if (!(x >= 0 && x <= 60)) throw new Error("정원 숫자가 올바르지 않습니다: " + k); gl[k.trim()] = Math.floor(x); });
+  const du = [...new Set((Array.isArray(T.duties) ? T.duties : []).map(x => String(x).trim()).filter(Boolean))];
+  if (du.length > 300 || du.some(x => x.length > 60)) throw new Error("업무 목록이 너무 깁니다");
+  return {cfg:v.cfg, rules:v.rules, gradeLimits:gl, duties:du};
+}
+async function importTemplate(file){
+  if (!file) return; const st = $("tpl-st");
+  try {
+    if (file.size > 2 * 1024 * 1024) throw new Error("파일이 너무 큽니다");
+    const T = JSON.parse(await file.text()), V = checkTemplate(T);
+    if (!confirm(`‘${T.school || "다른 학교"}’ 템플릿(${T.savedAt || "날짜 없음"})을 이 학교에 적용할까요?\n· 규정·정원(${Object.keys(V.gradeLimits).length}개)·업무(${V.duties.length}개)·우대 항목이 바뀝니다\n· 교원 명단은 그대로 두고 순위만 다시 계산됩니다\n· 적용 전 자동 백업됩니다`)) return;
+    await backupNow("템플릿 불러오기 전");
+    await R("config").update(clone(V.cfg)); setConfig({...(CONFIG || {}), ...V.cfg});
+    await R("draft").update({gradeLimits:V.gradeLimits, duties:V.duties.length ? V.duties : null});
+    await resortAndSave({priorityRules:clone(V.rules || DEFAULT_RULES)});
+    await log("[관리자] 템플릿 불러오기: " + (T.school || ""));
+    WZ = wzFromCfg(); renderWiz(); fillInputControls(); renderAdmin();
+    st.textContent = "✅ 템플릿을 적용했습니다.";
+  } catch(e) { st.textContent = "⚠️ 불러오지 못했습니다: " + (e.message || e); }
+}
+async function startNewYear(){
+  const n = ((state && state.teachers) || []).length;
+  if (!confirm(`새 학년도를 시작합니다.\n· 교원 명단 ${n}명과 진행 상태(차례·선택 결과)를 비우고 0단계로 돌아갑니다\n· 규정·정원·업무 목록·우대 항목은 그대로 둡니다\n· 시작 전에 자동 백업됩니다 (복구는 ‘수정·복구’ 탭)\n\n작년 결과를 먼저 내려받아 두셨나요? 계속할까요?`)) return;
+  await backupNow("새 학년도 시작 전");
+  try { await R("inbox").remove(); } catch(e) {}
+  await R("draft").update({teachers:null, stage:0, currentTurn:0, priorityConfirmed:false});
+  await log("[관리자] 새 학년도 시작(명단·진행 초기화)");
+  alert("✅ 새 학년도를 시작했습니다. [② 명단·우대] 탭에서 올해 교원 점수·경력을 입력하세요.\n(규정이 바뀌었다면 [① 학교 준비]에서 개정안 PDF를 올려 달라진 점만 반영할 수 있습니다.)");
+}
+
 
 /* =====================================================================
    v3 추가 모듈: 암호 처리 / 확인·입력창 / 기록·백업·삭제 / 제작자 콘솔 / 학교 입장
@@ -2055,6 +2383,7 @@ function loadScript(src){
 async function loadRegPdf(file){
   if (!file) return;
   const st = $("reg-status");
+  if (/\.txt$/i.test(file.name)) { const tx = await file.text(); $("reg-text").value = tx; onRegText(); st.textContent = `✅ ${file.name} 을(를) 읽었습니다.`; runAuto(); return; }
   if (file.size > 25 * 1024 * 1024) { st.textContent = "25MB 이하의 PDF만 읽을 수 있어요."; return; }
   st.textContent = "PDF를 읽는 중…";
   try {
@@ -2078,6 +2407,7 @@ async function loadRegPdf(file){
     if (text.replace(/\s/g, "").length < 50) { st.innerHTML = "⚠️ 글자를 거의 읽지 못했습니다. 스캔(그림) 형태의 PDF일 수 있어요. 아래 칸에 내용을 직접 붙여넣거나, PDF를 AI(Claude 등)에 첨부해 해석을 맡겨 주세요."; return; }
     $("reg-text").value = text; onRegText();
     st.textContent = `✅ ${file.name} — ${n}쪽, ${text.length.toLocaleString()}자를 읽었습니다.`;
+    runAuto();
   } catch(e) {
     st.textContent = "⚠️ PDF를 읽지 못했습니다(" + (e.message || e) + "). 인터넷 연결을 확인하거나, 규정 내용을 아래 칸에 붙여넣어 주세요.";
   }
@@ -2626,7 +2956,7 @@ const ADMIN_TABS = [
 ];
 function adminTabOf(c){
   const t = c.textContent;
-  if (c.id === "wiz-card" || c.id === "di-card" || /학년·전담 정원|업무 목록/.test(t.slice(0, 80))) return "prep";
+  if (c.id === "wiz-card" || c.id === "di-card" || c.id === "tpl-card" || /학년·전담 정원|업무 목록/.test(t.slice(0, 80))) return "prep";
   if (c.id === "sec-card") return "sec";
   if (/배정우대 관리/.test(t.slice(0, 60))) return "people";
   if (/단계 전환/.test(t.slice(0, 40))) return "run";
@@ -2644,7 +2974,7 @@ function setupAdminTabs(){
   const cards = [...adm.children].filter(c => c.classList.contains("cfg"));
   const order = ["wiz-card", "grade", "di-card", "duty"];
   cards.forEach(c => { c.dataset.tab = adminTabOf(c); });
-  const rank = c => c.id === "wiz-card" ? 0 : /학년·전담 정원/.test(c.textContent.slice(0, 60)) ? 1 : c.id === "di-card" ? 2 : 3;
+  const rank = c => c.id === "wiz-card" ? 0 : /학년·전담 정원/.test(c.textContent.slice(0, 60)) ? 1 : c.id === "di-card" ? 2 : c.id === "tpl-card" ? 4 : 3;
   const prep = cards.filter(c => c.dataset.tab === "prep").sort((a, b) => rank(a) - rank(b));
   const anchor = prep.length ? prep[prep.length - 1].nextSibling : null;
   prep.forEach(c => adm.insertBefore(c, anchor));
